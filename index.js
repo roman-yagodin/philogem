@@ -116,7 +116,7 @@ you will not do much!
 _Lewis Carroll_
 ---
 Q1. What's the _thing that nobody can possibly find fault with_?
-Come up with an example you can share with others.
+Come up with an example you can possibly share with others.
 `,
 
 `
@@ -146,15 +146,20 @@ Q1. What the word _accurately_ means here?
 }
 
 async function main() {
-    //const x1 = await start1();
-    const x1 = true;
-    if (!x1)
+    //const sc1 = await scene1_door();
+    const sc1 = true;
+    if (!sc1)
+        return false;
+
+    const sc2 = await scene2_terminal();
+    //const sc2 = true;
+    if (!sc2)
         return false;
 
     return await notesLoop();
 }
 
-async function start1() {
+async function scene1_door() {
     await typeln("You stand before pretty much arbitrary door.");
     await wait(_hs);
     await typeln("Do you feel anything?");
@@ -179,11 +184,51 @@ async function start1() {
     return true;
 }
 
+async function scene2_terminal() {
+    await typeln("You entered small room with a chair, table and old console terminal on it.");
+    await wait(_1s);
+    await typeln("No other doors or even windows.");
+
+    await typeln();
+    await typeln("> Welcome to The Great Library terminal!"); // in green!
+    await wait(_hs);
+    await typeln("was typed on the screen.");
+    await wait(_hs);
+    await typeln("> press any key then ready.");
+    await typeln();
+    
+    await wait(_5s);
+    await typeln("What do you think you will do?");
+    await typeln();
+    
+    const choice = await menu([
+        "Press any key.",
+        "Leave this place for good."
+    ]);
+
+    if (choice == 2) {
+        await typeln("You leaved this place. It's too good for you!");
+        await typeln("Game over.");
+        return false;
+    }
+
+    await typeln("> Hello, Reader_1!");
+    await typeln("> Take your time and have fun!");
+    await typeln();
+
+    await wait(_3s);
+
+    return true;
+}
+
 async function notesLoop() {
     // TODO: Store progress in local storage or cookie
     // TODO: Need a way to go to any progress point for debug
     // TODO: Note parsing, randomized questions
     while(true) {
+
+        await typeln("Fetching library index..."); // progress?
+        await wait(_3s);
 
         t.clear();
 
@@ -204,7 +249,7 @@ async function notesLoop() {
         await typeln();
         await wait(_5s);
 
-        await typeln("press any key then ready...");
+        await typeln("> press any key then ready.");
         await read();
     }
 
