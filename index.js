@@ -135,40 +135,49 @@ async function waitKey() {
     });
 }
 
-async function menu(options) {
+async function menu(options, showMenu = true) {
     // TODO: Randomize options order/numbering
     // TODO: Randomly exclude certain options
-    // TODO: Wait for input w/o retyping items
 
-    setStyle(styles.boldMagenta);
-    for (let i = 0; i < options.length; i++) {
-        await typeln(`${i + 1}. ${options[i]}`);
-        if (i !== options.length - 1) {
-            await wait(_hs);
+    if (showMenu) {
+        setStyle(styles.boldMagenta);
+        for (let i = 0; i < options.length; i++) {
+            await typeln(`${i + 1}. ${options[i]}`);
+            if (i !== options.length - 1) {
+                await wait(_hs);
+            }
         }
+        resetStyle();
+        await typeln();
     }
-
-    resetStyle();
 
     // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command. */
     const key = await read();
-    await typeln();
-
     return parseInt(key.key);
 }
 
 function parseNote(md) {
+
+    let author = "";
+    const authorIndex = md.indexOf("author:");
+    if (authorIndex >= 0) {
+        const eos = md.indexOf("\n", authorIndex + "author:".length);
+        author = md.substring(authorIndex + "author:".length, eos).trim();
+    }
+
     const fmIndex = md.indexOf("---");
     if (fmIndex >= 0) {
         return {
             text: md.substring(fmIndex + 3),
-            original: md
+            original: md,
+            author: author
         };
     }
     else {
         return {
             text: md,
-            original: md
+            original: md,
+            author: author
         };
     }
 }
@@ -209,6 +218,13 @@ async function main() {
     await typeln("Game over.");
 }
 
+function randomInt(from, to) {
+    if (from > to) {
+        throw new Error(`Argument "from" must be lesser or equal to the "to"`);
+    }
+    return Math.floor(Math.random() * (to - from)) + from;
+}
+
 async function scene1_door() {
     await typeln("You stand before pretty much arbitrary door.");
     await wait(_hs);
@@ -225,6 +241,17 @@ async function scene1_door() {
     ]);
 
     if (choice !== 2) {
+
+        tgl.playerName = randomMsg(["human","@", "reader"]);
+        tgl.actionCounter = randomInt(5, 10);
+
+        setStyle(styles.boldGreen);
+        await typeln(`> Hello, ${tgl.playerName}!`);
+        await typeln("> Take your time and have fun!");
+        resetStyle();
+
+        await typeln();
+
         // to the room
         const p1 = progress("Fetching library index...");
         const p2 = fetchIndex();
@@ -268,7 +295,7 @@ async function progress(message) {
 }
 
 function randomMsg(messages) {
-    const msgIndex = Math.floor(Math.random() * messages.length);
+    const msgIndex = randomInt(0, messages.length);
     return messages[msgIndex];
 }
 
@@ -285,12 +312,13 @@ async function scene4_room(notes) {
 
     // TODO: Store progress in local storage or cookie
     // TODO: Randomized questions
-    let skipNote = false;
+    let showNote = true;
+    let showMenu = true;
     let noteIndex = Math.floor(Math.random() * notes.length);
     while(true) {
 
         const note = parseNote(notes[noteIndex]);
-        if (!skipNote) {
+        if (showNote) {
 
             await command("CLS");
             const noteLines = note.text.split('\n');
@@ -317,16 +345,20 @@ async function scene4_room(notes) {
 
         skipNote = false;
 
-        // TODO: "Reveal author" action
         const choice = await menu([
             randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]),
             randomMsg(["Look right.", "Turn right.", "Turn clockwise."]),
             "Copy the note.",
+            "Reveal author.",
             "Leave...",
-        ]);
+        ], showMenu);
+        showMenu = false;
+
+        // TODO: Avoid rewriting code when choice list changes
 
         if (choice === 1) {
             noteIndex--;
+            tgl.actionCounter--;
             if (noteIndex < 0) {
                 noteIndex = notes.length - 1;
             }
@@ -334,20 +366,36 @@ async function scene4_room(notes) {
 
         if (choice === 2) {
             noteIndex++;
+            tgl.actionCounter--;
             if (noteIndex >= notes.length) {
                 noteIndex = 0;
             }
         }
 
         if (choice === 3) {
+            tgl.actionCounter--;
             const wasCopied = await copyToClipboard(note.original);
             await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
             await typeln();
-            skipNote = true;
+            showNote = false;
         }
 
-        // TODO: Avoid rewriting code when choice list changes
         if (choice === 4) {
+            tgl.actionCounter--;
+            await type("The author is ");
+            setStyle(styles.boldCyan);
+            await typeln(note.author);
+            resetStyle();
+            await typeln();
+            showNote = false;
+        }
+
+        if (choice === 5) {
+            break;
+        }
+
+        if (tgl.actionCounter === 0) {
+            await typeln("You are too exhaused, come back another day.");
             break;
         }
     }
