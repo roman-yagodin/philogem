@@ -5,10 +5,37 @@ const _1s = 1000;
 const _hs = _1s / 2;
 const _2s = _1s * 2;
 const _3s = _1s * 3;
+const _4s = _1s * 4;
 const _5s = _1s * 5;
 
+const baseTheme = {
+    foreground: '#F8F8F8',
+    background: '#2D2E2C',
+    selection: '#5DA5D533',
+    black: '#1E1E1D',
+    brightBlack: '#262625',
+    red: '#CE5C5C',
+    brightRed: '#FF7272',
+    green: '#5BCC5B',
+    brightGreen: '#72FF72',
+    yellow: '#CCCC5B',
+    brightYellow: '#FFFF72',
+    blue: '#5D5DD3',
+    brightBlue: '#7279FF',
+    magenta: '#BC5ED1',
+    brightMagenta: '#E572FF',
+    cyan: '#5DA5D5',
+    brightCyan: '#72F0FF',
+    white: '#F8F8F8',
+    brightWhite: '#FFFFFF'
+};
+
 function init() {
-    const t = new Terminal();
+    const t = new Terminal({
+        fontFamily: '"Cascadia Code", Menlo, monospace',
+        theme: baseTheme,
+        cursorBlink: true
+    });
     window.t = t;
     window.tgl = {};
     t.attachCustomKeyEventHandler(e => {
@@ -21,6 +48,24 @@ function init() {
     t.focus();
 }
 
+const styles = {
+    boldGreen: "\x1b[32;1m",
+    boldRed: "\x1b[31;1m",
+    boldYellow: "\x1b[33;1m",
+    boldMagenta: "\x1b[35;1m",
+    boldBlue: "\x1b[34;1m",
+    boldCyan: "\x1b[36;1m",
+    default: "\x1b[0m"
+};
+
+function setStyle(style) {
+    t.write(style);
+}
+
+function resetStyle() {
+    t.write(styles.default);
+}
+
 async function typeln(s) {
     if (s) {
         return type(s + EOL);
@@ -29,7 +74,8 @@ async function typeln(s) {
         return type(EOL);
     }
 }
-
+    
+// TODO: Bold/italics support
 async function type(s) {
     return new Promise((resolve) => {
         let i = 0;
@@ -91,12 +137,18 @@ async function waitKey() {
 
 async function menu(options) {
     // TODO: Randomize options order/numbering
+    // TODO: Randomly exclude certain options
+    // TODO: Wait for input w/o retyping items
+
+    setStyle(styles.boldMagenta);
     for (let i = 0; i < options.length; i++) {
         await typeln(`${i + 1}. ${options[i]}`);
         if (i !== options.length - 1) {
             await wait(_hs);
         }
     }
+
+    resetStyle();
 
     // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command. */
     const key = await read();
@@ -105,58 +157,56 @@ async function menu(options) {
     return parseInt(key.key);
 }
 
-async function loadNote() {
-    // TODO: Load markdown notes from Github public API https://api.github.com/repos/roman-yagodin/tgl/contents/. 
-    const notes = [
-`
-If you limit your actions in life
-to things that nobody can possibly find fault with,
-you will not do much!
-
-_Lewis Carroll_
----
-Q1. What's the _thing that nobody can possibly find fault with_?
-Come up with an example you can possibly share with others.
-`,
-
-`
-One of the secrets of life
-is that all that is really worth the doing
-is what we do for others.
-
-_Lewis Carroll_
----
-Q1. Remember the last major (or minor) thing you have done today. 
-Was it just for you, for the others, or both?
-`,
-
-`
-One of the hardest things in the world
-is to convey a meaning accurately
-from one mind to another.
-
-_Lewis Carroll_
----
-Q1. What the word _accurately_ means here?
-`
-    ];
-
-    const noteIndex = Math.floor(Math.random() * notes.length);
-    return notes[noteIndex];    
+function parseNote(md) {
+    const fmIndex = md.indexOf("---");
+    if (fmIndex >= 0) {
+        return {
+            text: md.substring(fmIndex + 3),
+            original: md
+        };
+    }
+    else {
+        return {
+            text: md,
+            original: md
+        };
+    }
 }
 
+// TODO: Need better error handling here
+async function fetchIndex() {
+    const indexUrl = "https://api.github.com/repos/roman-yagodin/tgl/contents/data";
+    return fetch(indexUrl)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then((json) => {
+            tgl.index = json;
+            for (let entry of tgl.index) {
+                fetch(entry.download_url)
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then((text) => {
+                        entry.content = text;
+                    });
+            }
+        })
+        .catch((error) => {
+            console.error(`Could not fetch verse: ${error}`);
+        });
+}
+
+// TODO: Need a way to go to any progress point for debug
 async function main() {
-    //const sc1 = await scene1_door();
-    const sc1 = true;
-    if (!sc1)
-        return false;
-
-    const sc2 = await scene2_terminal();
-    //const sc2 = true;
-    if (!sc2)
-        return false;
-
-    return await notesLoop();
+    await scene1_door();
+    await typeln("Game over.");
 }
 
 async function scene1_door() {
@@ -170,90 +220,139 @@ async function scene1_door() {
     const choice = await menu([
         "I feel *something*!",
         "I don't feel anything...",
-        "I do *feel* anything."
+        "I do *feel* anything.",
+        "I feel EVERYTHING!.."
     ]);
 
-    console.log(choice);
+    if (choice !== 2) {
+        // to the room
+        const p1 = progress("Fetching library index...");
+        const p2 = fetchIndex();
+        await Promise.all([p1, p2]);
+
+        const notes = tgl.index.map(entry => (entry.content));
+        console.log(notes);
+
+        return scene4_room(notes);
+    }
 
     if (choice === 2) {
         await typeln("No matter how you try, the door remains shut.");
-        await typeln("Game over.");
         return false;
     }
 
     return true;
 }
 
-async function scene2_terminal() {
-    await typeln("You entered small room with a chair, table and old console terminal on it.");
-    await wait(_1s);
-    await typeln("No other doors or even windows.");
-
-    await typeln();
-    await typeln("> Welcome to The Great Library terminal!"); // in green!
-    await wait(_hs);
-    await typeln("was typed on the screen.");
-    await wait(_hs);
-    await typeln("> press any key then ready.");
-    await typeln();
+async function command(command) {
+    setStyle(styles.boldYellow);
+    await typeln("> " + command);
+    resetStyle();
     
-    await wait(_5s);
-    await typeln("What do you think you will do?");
-    await typeln();
-    
-    const choice = await menu([
-        "Press any key.",
-        "Leave this place for good."
-    ]);
-
-    if (choice == 2) {
-        await typeln("You leaved this place. It's too good for you!");
-        await typeln("Game over.");
-        return false;
+    if (command === "CLS") {
+        await wait(_hs);
+        t.clear();
     }
 
-    await typeln("> Hello, Reader_1!");
-    await typeln("> Take your time and have fun!");
-    await typeln();
+    return true;
+}
+
+async function progress(message) {
+    setStyle(styles.boldRed);
+    await typeln(message);
+    resetStyle();
 
     await wait(_3s);
 
     return true;
 }
 
-async function notesLoop() {
+function randomMsg(messages) {
+    const msgIndex = Math.floor(Math.random() * messages.length);
+    return messages[msgIndex];
+}
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+async function scene4_room(notes) {
+
     // TODO: Store progress in local storage or cookie
-    // TODO: Need a way to go to any progress point for debug
-    // TODO: Note parsing, randomized questions
+    // TODO: Randomized questions
+    let skipNote = false;
+    let noteIndex = Math.floor(Math.random() * notes.length);
     while(true) {
 
-        await typeln("Fetching library index..."); // progress?
-        await wait(_3s);
+        const note = parseNote(notes[noteIndex]);
+        if (!skipNote) {
 
-        t.clear();
+            await command("CLS");
+            const noteLines = note.text.split('\n');
 
-        const note = await loadNote();
-        const noteLines = note.split('\n');
-        for (let i = 0; i < noteLines.length; i++) {
-            const line = noteLines[i];
-            if (line === "---") {
-                await typeln();
-                await wait(_5s);
+            setStyle(styles.boldCyan);
+            for (let i = 0; i < noteLines.length; i++) {
+                const line = noteLines[i];
+                if (line.startsWith("---")) {
+                    await typeln();
+                    resetStyle();
+                    await wait(_5s);
+                }
+                else {
+                    await typeln('\t' + line);
+                    await wait(_hs);
+                }
             }
-            else {
-                await typeln('\t' + line);
-                await wait(_hs);
+
+            resetStyle();
+
+            await typeln();
+            await wait(_5s);
+        }
+
+        skipNote = false;
+
+        // TODO: "Reveal author" action
+        const choice = await menu([
+            randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]),
+            randomMsg(["Look right.", "Turn right.", "Turn clockwise."]),
+            "Copy the note.",
+            "Leave...",
+        ]);
+
+        if (choice === 1) {
+            noteIndex--;
+            if (noteIndex < 0) {
+                noteIndex = notes.length - 1;
             }
         }
 
-        await typeln();
-        await wait(_5s);
+        if (choice === 2) {
+            noteIndex++;
+            if (noteIndex >= notes.length) {
+                noteIndex = 0;
+            }
+        }
 
-        await typeln("> press any key then ready.");
-        await read();
+        if (choice === 3) {
+            const wasCopied = await copyToClipboard(note.original);
+            await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
+            await typeln();
+            skipNote = true;
+        }
+
+        // TODO: Avoid rewriting code when choice list changes
+        if (choice === 4) {
+            break;
+        }
     }
 
-    return true;
+    return false;
 }
 
 $(() => {
