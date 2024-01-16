@@ -157,27 +157,22 @@ async function menu(options, showMenu = true) {
 }
 
 function parseNote(md) {
-
-    let author = "";
-    const authorIndex = md.indexOf("author:");
-    if (authorIndex >= 0) {
-        const eos = md.indexOf("\n", authorIndex + "author:".length);
-        author = md.substring(authorIndex + "author:".length, eos).trim();
-    }
-
     const fmIndex = md.indexOf("---");
     if (fmIndex >= 0) {
+        const fmText = md.substring(0, fmIndex);
+        const meta = jsyaml.load(fmText);
         return {
             text: md.substring(fmIndex + 3),
             original: md,
-            author: author
+            meta: meta
         };
     }
     else {
+        // probably error
         return {
             text: md,
             original: md,
-            author: author
+            meta: {}
         };
     }
 }
@@ -242,7 +237,8 @@ async function scene1_door() {
 
     if (choice !== 2) {
 
-        tgl.playerName = randomMsg(["human","@", "reader"]);
+        // greeting
+        tgl.playerName = randomMsg(["human","@", "reader", "dear", "darling", "humanoid"]);
         tgl.actionCounter = randomInt(5, 10);
 
         setStyle(styles.boldGreen);
@@ -252,15 +248,18 @@ async function scene1_door() {
 
         await typeln();
 
-        // to the room
+        // fetch notes
         const p1 = progress("Fetching library index...");
         const p2 = fetchIndex();
         await Promise.all([p1, p2]);
 
-        const notes = tgl.index.map(entry => (entry.content));
-        console.log(notes);
+        tgl.notes = tgl.index.map(entry => (parseNote(entry.content)));
 
-        return scene4_room(notes);
+        console.log(tgl.notes);
+
+        // to the room
+        const noteIndex = randomInt(0, tgl.notes.length);
+        return scene4_room(noteIndex);
     }
 
     if (choice === 2) {
@@ -308,16 +307,16 @@ async function copyToClipboard(text) {
     }
 }
 
-async function scene4_room(notes) {
+async function scene4_room(noteIndex) {
 
     // TODO: Store progress in local storage or cookie
     // TODO: Randomized questions
     let showNote = true;
     let showMenu = true;
-    let noteIndex = Math.floor(Math.random() * notes.length);
+    
     while(true) {
 
-        const note = parseNote(notes[noteIndex]);
+        const note = tgl.notes[noteIndex];
         if (showNote) {
 
             await command("CLS");
@@ -384,7 +383,7 @@ async function scene4_room(notes) {
             tgl.actionCounter--;
             await type("The author is ");
             setStyle(styles.boldCyan);
-            await typeln(note.author);
+            await typeln(note.meta.author);
             resetStyle();
             await typeln();
             showNote = false;
