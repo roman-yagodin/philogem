@@ -37,11 +37,11 @@ function init() {
         cursorBlink: true
     });
     window.t = t;
-    window.tgl = {};
+    window.game = {};
     t.attachCustomKeyEventHandler(e => {
         //console.log(e);
         if (e.type === "keyup") {
-            window.tgl.lastKey = e;
+            window.game.lastKey = e;
         }
     });
     t.open(document.getElementById('terminal'));
@@ -119,15 +119,15 @@ async function wait(delay) {
 
 async function read() {
     await waitKey();
-    console.log(window.tgl.lastKey);
-    return window.tgl.lastKey;
+    console.log(window.game.lastKey);
+    return window.game.lastKey;
 }
 
 async function waitKey() {
-    window.tgl.lastKey = null;
+    window.game.lastKey = null;
     return new Promise((resolve) => {
         const interval = setInterval(() => {
-            if (window.tgl.lastKey) {
+            if (window.game.lastKey) {
                 clearInterval(interval);
                 resolve("done");
             }
@@ -188,8 +188,8 @@ async function fetchIndex() {
             return response.json();
         })
         .then((json) => {
-            tgl.index = json;
-            for (let entry of tgl.index) {
+            game.index = json;
+            for (let entry of game.index) {
                 fetch(entry.download_url)
                     .then((response) => {
                         if (!response.ok) {
@@ -238,11 +238,11 @@ async function scene1_door() {
     if (choice !== 2) {
 
         // greeting
-        tgl.playerName = randomMsg(["human","@", "reader", "dear", "darling", "humanoid"]);
-        tgl.actionCounter = randomInt(5, 10);
+        game.playerName = randomMsg(["human","@", "reader", "dear", "darling", "humanoid"]);
+        game.actionCounter = randomInt(5, 10);
 
         setStyle(styles.boldGreen);
-        await typeln(`> Hello, ${tgl.playerName}!`);
+        await typeln(`> Hello, ${game.playerName}!`);
         await typeln("> Take your time and have fun!");
         resetStyle();
 
@@ -253,12 +253,12 @@ async function scene1_door() {
         const p2 = fetchIndex();
         await Promise.all([p1, p2]);
 
-        tgl.notes = tgl.index.map(entry => (parseNote(entry.content)));
+        game.notes = game.index.map(entry => (parseNote(entry.content)));
 
-        console.log(tgl.notes);
+        console.log(game.notes);
 
         // to the room
-        const noteIndex = randomInt(0, tgl.notes.length);
+        const noteIndex = randomInt(0, game.notes.length);
         return scene4_room(noteIndex);
     }
 
@@ -316,7 +316,7 @@ async function scene4_room(noteIndex) {
     
     while(true) {
 
-        const note = tgl.notes[noteIndex];
+        const note = game.notes[noteIndex];
         if (showNote) {
 
             await command("CLS");
@@ -325,15 +325,8 @@ async function scene4_room(noteIndex) {
             setStyle(styles.boldCyan);
             for (let i = 0; i < noteLines.length; i++) {
                 const line = noteLines[i];
-                if (line.startsWith("---")) {
-                    await typeln();
-                    resetStyle();
-                    await wait(_5s);
-                }
-                else {
-                    await typeln('\t' + line);
-                    await wait(_hs);
-                }
+                await typeln('\t' + line);
+                await wait(_hs);
             }
 
             resetStyle();
@@ -349,6 +342,7 @@ async function scene4_room(noteIndex) {
             randomMsg(["Look right.", "Turn right.", "Turn clockwise."]),
             "Copy the note.",
             "Reveal author.",
+            "Show hint",
             "Leave...",
         ], showMenu);
         showMenu = false;
@@ -357,7 +351,7 @@ async function scene4_room(noteIndex) {
 
         if (choice === 1) {
             noteIndex--;
-            tgl.actionCounter--;
+            game.actionCounter--;
             if (noteIndex < 0) {
                 noteIndex = notes.length - 1;
             }
@@ -365,14 +359,14 @@ async function scene4_room(noteIndex) {
 
         if (choice === 2) {
             noteIndex++;
-            tgl.actionCounter--;
+            game.actionCounter--;
             if (noteIndex >= notes.length) {
                 noteIndex = 0;
             }
         }
 
         if (choice === 3) {
-            tgl.actionCounter--;
+            game.actionCounter--;
             const wasCopied = await copyToClipboard(note.original);
             await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
             await typeln();
@@ -380,7 +374,7 @@ async function scene4_room(noteIndex) {
         }
 
         if (choice === 4) {
-            tgl.actionCounter--;
+            game.actionCounter--;
             await type("The author is ");
             setStyle(styles.boldCyan);
             await typeln(note.meta.author);
@@ -388,12 +382,31 @@ async function scene4_room(noteIndex) {
             await typeln();
             showNote = false;
         }
-
+        
         if (choice === 5) {
+            game.actionCounter--;
+            if (note.meta.hints.length > 0) {
+                const hintIndex = randomInt(0, note.meta.hints.length);
+                const hint = note.meta.hints[hintIndex];
+                const hintLines = hint.split('\n');
+
+                for (let i = 0; i < hintLines.length; i++) {
+                    const line = hintLines[i];
+                    await typeln('\t' + line);
+                    await wait(_hs);
+                }
+            }
+            else {
+                await typeln("No hints available.");
+            }
+            showNote = false;
+        }
+
+        if (choice === 6) {
             break;
         }
 
-        if (tgl.actionCounter === 0) {
+        if (game.actionCounter === 0) {
             await typeln("You are too exhaused, come back another day.");
             break;
         }
