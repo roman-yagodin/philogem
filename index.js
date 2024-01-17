@@ -53,6 +53,7 @@ const styles = {
     boldRed: "\x1b[31;1m",
     boldYellow: "\x1b[33;1m",
     boldMagenta: "\x1b[35;1m",
+    magenta: "\x1b[35m",
     boldBlue: "\x1b[34;1m",
     boldCyan: "\x1b[36;1m",
     default: "\x1b[0m"
@@ -135,25 +136,37 @@ async function waitKey() {
     });
 }
 
-async function menu(options, showMenu = true) {
+async function menu(options, showOptions = true) {
     // TODO: Randomize options order/numbering
     // TODO: Randomly exclude certain options
 
-    if (showMenu) {
-        setStyle(styles.boldMagenta);
+    if (showOptions) {
+        setStyle(styles.magenta);
         for (let i = 0; i < options.length; i++) {
-            await typeln(`${i + 1}. ${options[i]}`);
-            if (i !== options.length - 1) {
-                await wait(_hs);
-            }
+            await typeln(`${i + 1}. ${options[i].text}`);
+            await wait(_hs);
         }
         resetStyle();
-        await typeln();
     }
 
-    // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command. */
-    const key = await read();
-    return parseInt(key.key);
+    while (true) {
+        try {
+            setStyle(styles.magenta);
+            await type("<<");
+            resetStyle();
+
+            // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
+            const key = await read();
+            const numKey = parseInt(key.key);
+            setStyle(styles.magenta);
+            await typeln(key.key);
+            resetStyle();
+            return options[numKey - 1].choice;
+        }
+        catch (error) {
+            console.error(error);
+        }
+    }
 }
 
 function parseNote(md) {
@@ -231,30 +244,30 @@ async function scene1_door() {
     await wait(_5s);
 
     let choice = await menu([
-        "I feel *something*!",
-        "I don't feel anything...",
-        "I do *feel* anything.",
-        "I feel EVERYTHING!.."
+        { text: "I feel *something*!", choice: "thing" },
+        { text: "I don't feel anything...", choice: "nothing" },
+        { text: "I do *feel* anything.", choice: "thing" },
+        { text: "I feel EVERYTHING!..", choice: "everything" }
     ]);
-
-    const x = randomInt(0, 10);
-    if (choice === 4) {
+    
+    if (choice === "everything") {
+        const x = randomInt(0, 10);
         if (x >= 5) {
-            choice = 1;
+            choice = "thing";
             setStyle(styles.boldRed);
             await typeln("Well, let's believe you, this time...");
-            await typeln();
             resetStyle();
         }
         else {
-            choice = 2;
+            choice = "nothing";
         }
     }
 
-    if (choice !== 2) {
+    if (choice === "thing") {
         return await scene2_greeting();
     }
     else {
+        await typeln();
         await typeln("No matter how you try, the door remains shut.");
         return false;
     }
@@ -268,6 +281,7 @@ async function scene2_greeting() {
     game.actionCounter = randomInt(5, 10);
 
     setStyle(styles.boldGreen);
+    await typeln();
     await typeln(`> Hello, ${game.playerName}!`);
     await typeln("> Take your time and have fun!");
     resetStyle();
@@ -278,7 +292,7 @@ async function scene2_greeting() {
     const p1 = progress("Fetching library index...");
     const p2 = fetchIndex();
     await Promise.all([p1, p2]);
-
+    
     game.notes = game.index.map(entry => (parseNote(entry.content)));
 
     console.log(game.notes);
@@ -320,7 +334,8 @@ async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
         return true;
-    } catch (err) {
+    } catch (error) {
+        console.error(error);
         return false;
     }
 }
@@ -333,10 +348,9 @@ async function scene4_room(noteIndex) {
     let showMenu = true;
     
     while(true) {
-
         const note = game.notes[noteIndex];
-        if (showNote) {
 
+        if (showNote) {
             await command("CLS");
             const noteLines = note.text.split('\n');
 
@@ -346,62 +360,62 @@ async function scene4_room(noteIndex) {
                 await typeln('\t' + line);
                 await wait(_hs);
             }
-
             resetStyle();
 
             await typeln();
             await wait(_5s);
-        }
-
-        skipNote = false;
-
-        const choice = await menu([
-            randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]),
-            randomMsg(["Look right.", "Turn right.", "Turn clockwise."]),
-            "Copy the note.",
-            "Reveal author.",
-            "Show hint",
-            "Leave...",
-        ], showMenu);
-        showMenu = false;
-
-        // TODO: Avoid rewriting code when choice list changes
-
-        if (choice === 1) {
-            noteIndex--;
-            game.actionCounter--;
-            if (noteIndex < 0) {
-                noteIndex = notes.length - 1;
-            }
-        }
-
-        if (choice === 2) {
-            noteIndex++;
-            game.actionCounter--;
-            if (noteIndex >= notes.length) {
-                noteIndex = 0;
-            }
-        }
-
-        if (choice === 3) {
-            game.actionCounter--;
-            const wasCopied = await copyToClipboard(note.original);
-            await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
-            await typeln();
             showNote = false;
         }
 
-        if (choice === 4) {
+        const choice = await menu([
+            { text: randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]), choice: "left" },
+            { text: randomMsg(["Look right.", "Turn right.", "Turn clockwise."]), choice: "right" }, 
+            { text: "Copy the note.", choice: "copy" },
+            { text: "Reveal author.", choice: "author" },
+            { text: "Show hint", choice: "hint" },
+            { text: "Leave...", choice: "leave" },
+        ], showMenu);
+        showMenu = false;
+
+        if (choice === "left") {
             game.actionCounter--;
+            noteIndex--;
+            if (noteIndex < 0) {
+                noteIndex = game.notes.length - 1;
+            }
+            showNote = true;
+            showMenu = true;
+        }
+        
+        if (choice === "right") {
+            game.actionCounter--;
+            noteIndex++;
+            if (noteIndex >= game.notes.length) {
+                noteIndex = 0;
+            }
+            showNote = true;
+            showMenu = true;
+        }
+        
+        if (choice === "copy") {
+            game.actionCounter--;
+            const wasCopied = await copyToClipboard(note.original);
+            await typeln();
+            await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
+            await typeln();
+        }
+        
+        if (choice === "author") {
+            game.actionCounter--;
+            await typeln();
             await type("The author is ");
             setStyle(styles.boldCyan);
             await typeln(note.meta.author);
             resetStyle();
             await typeln();
-            showNote = false;
         }
         
-        if (choice === 5) {
+        if (choice === "hint") {
             game.actionCounter--;
             if (note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
@@ -415,17 +429,20 @@ async function scene4_room(noteIndex) {
                 }
             }
             else {
+                await typeln();
                 await typeln("No hints available.");
             }
-            showNote = false;
         }
-
-        if (choice === 6) {
+        
+        if (choice === "leave") {
             break;
         }
 
-        if (game.actionCounter === 0) {
+        if (game.actionCounter <= 0) {
+            setStyle(styles.boldRed);
+            await typeln();
             await typeln("You are too exhaused, come back another day.");
+            resetStyle();
             break;
         }
     }
