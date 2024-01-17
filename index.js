@@ -179,6 +179,7 @@ function parseNote(md) {
 
 // TODO: Need better error handling here
 async function fetchIndex() {
+    // TODO: Target website branch
     const indexUrl = "https://api.github.com/repos/roman-yagodin/tgl/contents/data";
     return fetch(indexUrl)
         .then((response) => {
@@ -210,6 +211,7 @@ async function fetchIndex() {
 // TODO: Need a way to go to any progress point for debug
 async function main() {
     await scene1_door();
+    await typeln();
     await typeln("Game over.");
 }
 
@@ -228,46 +230,62 @@ async function scene1_door() {
     
     await wait(_5s);
 
-    const choice = await menu([
+    let choice = await menu([
         "I feel *something*!",
         "I don't feel anything...",
         "I do *feel* anything.",
         "I feel EVERYTHING!.."
     ]);
 
-    if (choice !== 2) {
-
-        // greeting
-        game.playerName = randomMsg(["human","@", "reader", "dear", "darling", "humanoid"]);
-        game.actionCounter = randomInt(5, 10);
-
-        setStyle(styles.boldGreen);
-        await typeln(`> Hello, ${game.playerName}!`);
-        await typeln("> Take your time and have fun!");
-        resetStyle();
-
-        await typeln();
-
-        // fetch notes
-        const p1 = progress("Fetching library index...");
-        const p2 = fetchIndex();
-        await Promise.all([p1, p2]);
-
-        game.notes = game.index.map(entry => (parseNote(entry.content)));
-
-        console.log(game.notes);
-
-        // to the room
-        const noteIndex = randomInt(0, game.notes.length);
-        return scene4_room(noteIndex);
+    const x = randomInt(0, 10);
+    if (choice === 4) {
+        if (x >= 5) {
+            choice = 1;
+            setStyle(styles.boldRed);
+            await typeln("Well, let's believe you, this time...");
+            await typeln();
+            resetStyle();
+        }
+        else {
+            choice = 2;
+        }
     }
 
-    if (choice === 2) {
+    if (choice !== 2) {
+        return await scene2_greeting();
+    }
+    else {
         await typeln("No matter how you try, the door remains shut.");
         return false;
     }
 
     return true;
+}
+
+async function scene2_greeting() {
+    // greeting
+    game.playerName = randomMsg(["human","@", "reader", "dear", "darling", "humanoid"]);
+    game.actionCounter = randomInt(5, 10);
+
+    setStyle(styles.boldGreen);
+    await typeln(`> Hello, ${game.playerName}!`);
+    await typeln("> Take your time and have fun!");
+    resetStyle();
+
+    await typeln();
+
+    // fetch notes
+    const p1 = progress("Fetching library index...");
+    const p2 = fetchIndex();
+    await Promise.all([p1, p2]);
+
+    game.notes = game.index.map(entry => (parseNote(entry.content)));
+
+    console.log(game.notes);
+
+    // to the room
+    const noteIndex = randomInt(0, game.notes.length);
+    return scene4_room(noteIndex);
 }
 
 async function command(command) {
