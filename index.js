@@ -277,7 +277,7 @@ async function scene1_door() {
 
 async function scene2_greeting() {
     // greeting
-    game.playerName = randomMsg(["human","@", "reader", "dear", "darling", "humanoid"]);
+    game.playerName = randomMsg(["@", "human", "humanoid", "reader", "operator", "dear", "darling", "child", "adventurer", "traveler"]);
     game.actionCounter = randomInt(5, 10);
 
     setStyle(styles.boldGreen);
@@ -286,16 +286,16 @@ async function scene2_greeting() {
     await typeln("> Take your time and have fun!");
     resetStyle();
 
-    await typeln();
-
     // fetch notes
+    await typeln();
     const p1 = progress("Fetching library index...");
     const p2 = fetchIndex();
     await Promise.all([p1, p2]);
     
     game.notes = game.index.map(entry => (parseNote(entry.content)));
-
     console.log(game.notes);
+
+    await wait(_2s);
 
     // to the room
     const noteIndex = randomInt(0, game.notes.length);
@@ -371,7 +371,7 @@ async function scene4_room(noteIndex) {
             { text: randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]), choice: "left" },
             { text: randomMsg(["Look right.", "Turn right.", "Turn clockwise."]), choice: "right" }, 
             { text: "Copy the note.", choice: "copy" },
-            { text: "Reveal author.", choice: "author" },
+            { text: "Reveal the author.", choice: "author" },
             { text: "Show hint", choice: "hint" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
@@ -431,6 +431,7 @@ async function scene4_room(noteIndex) {
             else {
                 await typeln();
                 await typeln("No hints available.");
+                await typeln();
             }
         }
         
