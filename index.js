@@ -169,58 +169,6 @@ async function menu(options, showOptions = true) {
     }
 }
 
-function parseNote(md) {
-    const fmIndex = md.indexOf("---");
-    if (fmIndex >= 0) {
-        const fmText = md.substring(0, fmIndex);
-        const meta = jsyaml.load(fmText);
-        return {
-            text: md.substring(fmIndex + 3),
-            original: md,
-            meta: meta
-        };
-    }
-    else {
-        // probably error
-        return {
-            text: md,
-            original: md,
-            meta: {}
-        };
-    }
-}
-
-// TODO: Need better error handling here
-async function fetchIndex() {
-    // TODO: Target website branch
-    const indexUrl = "https://api.github.com/repos/roman-yagodin/tgl/contents/data";
-    return fetch(indexUrl)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then((json) => {
-            game.index = json;
-            for (let entry of game.index) {
-                fetch(entry.download_url)
-                    .then((response) => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error: ${response.status}`);
-                        }
-                        return response.text();
-                    })
-                    .then((text) => {
-                        entry.content = text;
-                    });
-            }
-        })
-        .catch((error) => {
-            console.error(`Could not fetch verse: ${error}`);
-        });
-}
-
 // TODO: Need a way to go to any progress point for debug
 async function main() {
     await scene1_door();
@@ -288,12 +236,9 @@ async function scene2_greeting() {
 
     // fetch notes
     await typeln();
-    const p1 = progress("Fetching library index...");
-    const p2 = fetchIndex();
-    await Promise.all([p1, p2]);
+    await progress("Fetching library index...");
     
-    game.notes = game.index.map(entry => (parseNote(entry.content)));
-    console.log(game.notes);
+    game.notes = notes;
 
     await wait(_2s);
 
