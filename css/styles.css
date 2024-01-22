@@ -1,3 +1,8 @@
-body {
+.terminal-box {
+    padding: 1rem;
     background-color: #2D2E2C;
+}
+
+.terminal-box:has(div.terminal.focus) {
+    outline: 4px solid #72FF72;
 }

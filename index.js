@@ -152,13 +152,13 @@ async function menu(options, showOptions = true) {
     while (true) {
         try {
             setStyle(styles.magenta);
-            await type("<<");
+            await type("<< ");
             resetStyle();
 
             // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
             const key = await read();
             const numKey = parseInt(key.key);
-            setStyle(styles.magenta);
+            setStyle(styles.boldMagenta);
             await typeln(key.key);
             resetStyle();
             return options[numKey - 1].choice;
@@ -291,9 +291,9 @@ async function scene4_room(noteIndex) {
     // TODO: Randomized questions
     let showNote = true;
     let showMenu = true;
-    
+    let note = game.notes[noteIndex];
+
     while(true) {
-        const note = game.notes[noteIndex];
 
         if (showNote) {
             await command("CLS");
@@ -313,37 +313,47 @@ async function scene4_room(noteIndex) {
         }
 
         const choice = await menu([
-            { text: randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]), choice: "left" },
-            { text: randomMsg(["Look right.", "Turn right.", "Turn clockwise."]), choice: "right" }, 
+            { text: "Loop by author", choice: "loopByAuthor" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint", choice: "hint" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
-
-        if (choice === "left") {
-            game.actionCounter--;
-            noteIndex--;
-            if (noteIndex < 0) {
-                noteIndex = game.notes.length - 1;
-            }
-            showNote = true;
-            showMenu = true;
-        }
         
-        if (choice === "right") {
-            game.actionCounter--;
-            noteIndex++;
-            if (noteIndex >= game.notes.length) {
-                noteIndex = 0;
+        game.actionCounter--;
+        if (game.actionCounter <= 0) {
+            setStyle(styles.boldRed);
+            await typeln();
+            await typeln("You are too exhaused, come back another day.");
+            resetStyle();
+            break;
+        }
+
+        if (choice === "loopByAuthor") {
+
+            const nextNote = game.notes.find(n => {
+                // TODO: Check not only current note, but also breadcrumbs
+                if (n.meta.author == note.meta.author && n.guid != note.guid) {
+                    return true;
+                }
+                return false;
+            });
+
+            console.log({note: note, nextNote: nextNote});
+
+            if (nextNote) {
+                note = nextNote;
+                showNote = true;
+                showMenu = true;
             }
-            showNote = true;
-            showMenu = true;
+            else {
+                showNote = true;
+                showMenu = true;
+            }
         }
         
         if (choice === "copy") {
-            game.actionCounter--;
             const wasCopied = await copyToClipboard(note.original);
             await typeln();
             await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
@@ -351,7 +361,6 @@ async function scene4_room(noteIndex) {
         }
         
         if (choice === "author") {
-            game.actionCounter--;
             await typeln();
             await type("The author is ");
             setStyle(styles.boldCyan);
@@ -361,7 +370,6 @@ async function scene4_room(noteIndex) {
         }
         
         if (choice === "hint") {
-            game.actionCounter--;
             if (note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
                 const hint = note.meta.hints[hintIndex];
@@ -381,14 +389,6 @@ async function scene4_room(noteIndex) {
         }
         
         if (choice === "leave") {
-            break;
-        }
-
-        if (game.actionCounter <= 0) {
-            setStyle(styles.boldRed);
-            await typeln();
-            await typeln("You are too exhaused, come back another day.");
-            resetStyle();
             break;
         }
     }
