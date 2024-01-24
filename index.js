@@ -30,6 +30,46 @@ const baseTheme = {
     brightWhite: '#FFFFFF'
 };
 
+class GameState {
+    constructor() {
+        this.actionCounter = 0;
+        this.playerName = "";
+        this.breadCrumbs = [];
+    }
+}
+
+class Game {
+    constructor() {
+        this.state = {};
+    }
+
+    loadOrNew() {
+        const state = localStorage.getItem("tgl_game_state");
+        if (state) {
+            this.state = JSON.parse(state);
+        }
+        else {
+            this.state = new GameState();
+            this.state.playerName = randomMsg(["@", "human", "humanoid", "reader", "operator", "dear", "darling", "child", "adventurer", "traveler"]);
+            this.state.actionCounter = randomInt(5, 10);
+        }
+
+        this.saveState();
+    }
+
+    saveState() {
+        localStorage.setItem("tgl_game_state", JSON.stringify(this.state));
+    }
+
+    decrementActionCounter() {
+        this.state.actionCounter--;
+        if (this.state.actionCounter < 0) {
+            this.state.actionCounter = 0;
+        }
+        this.saveState();
+    }
+}
+
 function init() {
     const t = new Terminal({
         fontFamily: '"Cascadia Code", Menlo, monospace',
@@ -37,7 +77,7 @@ function init() {
         cursorBlink: true
     });
     window.t = t;
-    window.game = {};
+    window.game = new Game();
     t.attachCustomKeyEventHandler(e => {
         //console.log(e);
         if (e.type === "keyup") {
@@ -152,7 +192,7 @@ async function menu(options, showOptions = true) {
     while (true) {
         try {
             setStyle(styles.magenta);
-            await type("<< ");
+            await type("?? ");
             resetStyle();
 
             // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
@@ -224,13 +264,18 @@ async function scene1_door() {
 }
 
 async function scene2_greeting() {
-    // greeting
-    game.playerName = randomMsg(["@", "human", "humanoid", "reader", "operator", "dear", "darling", "child", "adventurer", "traveler"]);
-    game.actionCounter = randomInt(5, 10);
+    
+    game.loadOrNew();
+    
+    if (game.state.actionCounter <= 0) {
+        await tooExhausted();
+        return false;
+    }
 
+    // greeting
     setStyle(styles.boldGreen);
     await typeln();
-    await typeln(`> Hello, ${game.playerName}!`);
+    await typeln(`> Hello, ${game.state.playerName}!`);
     await typeln("> Take your time and have fun!");
     resetStyle();
 
@@ -285,6 +330,13 @@ async function copyToClipboard(text) {
     }
 }
 
+async function tooExhausted() {
+    setStyle(styles.boldRed);
+    await typeln();
+    await typeln("You are too exhausted, come back another day.");
+    resetStyle();
+}
+
 async function scene4_room(noteIndex) {
 
     // TODO: Store progress in local storage or cookie
@@ -313,7 +365,7 @@ async function scene4_room(noteIndex) {
         }
 
         const choice = await menu([
-            { text: "Loop by author", choice: "loopByAuthor" },
+            { text: "Forward by author", choice: "forwardByAuthor" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint", choice: "hint" },
@@ -321,16 +373,13 @@ async function scene4_room(noteIndex) {
         ], showMenu);
         showMenu = false;
         
-        game.actionCounter--;
-        if (game.actionCounter <= 0) {
-            setStyle(styles.boldRed);
-            await typeln();
-            await typeln("You are too exhaused, come back another day.");
-            resetStyle();
+        game.decrementActionCounter();
+        if (game.state.actionCounter <= 0) {
+            await tooExhausted();
             break;
         }
 
-        if (choice === "loopByAuthor") {
+        if (choice === "forwardByAuthor") {
 
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
