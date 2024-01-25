@@ -89,14 +89,28 @@ function init() {
 }
 
 const styles = {
-    boldGreen: "\x1b[32;1m",
+    default: "\x1b[0m",
+    bold: "\x1b[1m",
+    italics: "\x1b[3m",
+
+    black: "\x1b[30m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    // TODO: Add orange or replacement
+    orange: "\x1b[33m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    magenta: "\x1b[35m",
+    cyan: "\x1b[36m",
+    white: "\x1b[37m",
+
+    // TODO: replace with combos
     boldRed: "\x1b[31;1m",
+    boldGreen: "\x1b[32;1m",
     boldYellow: "\x1b[33;1m",
     boldMagenta: "\x1b[35;1m",
-    magenta: "\x1b[35m",
     boldBlue: "\x1b[34;1m",
     boldCyan: "\x1b[36;1m",
-    default: "\x1b[0m"
 };
 
 function setStyle(style) {
@@ -339,11 +353,12 @@ async function tooExhausted() {
 
 async function scene4_room(noteIndex) {
 
-    // TODO: Store progress in local storage or cookie
-    // TODO: Randomized questions
     let showNote = true;
     let showMenu = true;
+
     let note = game.notes[noteIndex];
+    const colorIndex = randomInt(0, note.meta.colors.length);
+    let noteColor = note.meta.colors[colorIndex];
 
     while(true) {
 
@@ -351,7 +366,7 @@ async function scene4_room(noteIndex) {
             await command("CLS");
             const noteLines = note.text.split('\n');
 
-            setStyle(styles.boldCyan);
+            setStyle(styles[noteColor] + styles.italics);
             for (let i = 0; i < noteLines.length; i++) {
                 const line = noteLines[i];
                 await typeln('\t' + line);
@@ -365,7 +380,8 @@ async function scene4_room(noteIndex) {
         }
 
         const choice = await menu([
-            { text: "Forward by author", choice: "forwardByAuthor" },
+            { text: "Cycle by author.", choice: "cycleByAuthor" },
+            { text: "Cycle by color.", choice: "cycleByColor" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint", choice: "hint" },
@@ -379,11 +395,41 @@ async function scene4_room(noteIndex) {
             break;
         }
 
-        if (choice === "forwardByAuthor") {
-
+        if (choice === "cycleByAuthor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.author == note.meta.author && n.guid != note.guid) {
+                    return true;
+                }
+                return false;
+            });
+
+            console.log({note: note, nextNote: nextNote});
+
+            if (nextNote) {
+                note = nextNote;
+                const colorIndex = randomInt(0, note.meta.colors.length);
+                noteColor = note.meta.colors[colorIndex];
+
+                showNote = true;
+                showMenu = true;
+            }
+            else {
+                setStyle(styles.bold + styles.red);
+                await typeln();
+                await typeln("You've reached the EOW and step back...");
+                await typeln();
+                resetStyle();
+                
+                showNote = true;
+                showMenu = true;
+            }
+        }
+
+        if (choice === "cycleByColor") {
+            const nextNote = game.notes.find(n => {
+                // TODO: Check not only current note, but also breadcrumbs
+                if (n.meta.colors.includes(noteColor) && n.guid != note.guid) {
                     return true;
                 }
                 return false;
@@ -397,6 +443,12 @@ async function scene4_room(noteIndex) {
                 showMenu = true;
             }
             else {
+                setStyle(styles.bold + styles.red);
+                await typeln();
+                await typeln("You've reached the EOW and step back...");
+                await typeln();
+                resetStyle();
+                
                 showNote = true;
                 showMenu = true;
             }
