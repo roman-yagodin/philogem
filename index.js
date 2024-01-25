@@ -30,6 +30,50 @@ const baseTheme = {
     brightWhite: '#FFFFFF'
 };
 
+class GameState {
+    constructor() {
+        this.actionCounter = 0;
+        this.playerName = "";
+        this.breadCrumbs = [];
+    }
+}
+
+class Game {
+    constructor() {
+        this.state = {};
+    }
+
+    isNewGame() {
+        return this.state.breadCrumbs.length === 0;
+    }
+
+    loadOrNew() {
+        const state = localStorage.getItem("tgl_game_state");
+        if (state) {
+            this.state = JSON.parse(state);
+        }
+        else {
+            this.state = new GameState();
+            this.state.playerName = randomMsg(["@", "human", "humanoid", "reader", "operator", "dear", "darling", "child", "adventurer", "traveler"]);
+            this.state.actionCounter = randomInt(5, 10);
+        }
+
+        this.saveState();
+    }
+
+    saveState() {
+        localStorage.setItem("tgl_game_state", JSON.stringify(this.state));
+    }
+
+    decrementActionCounter() {
+        this.state.actionCounter--;
+        if (this.state.actionCounter < 0) {
+            this.state.actionCounter = 0;
+        }
+        this.saveState();
+    }
+}
+
 function init() {
     const t = new Terminal({
         fontFamily: '"Cascadia Code", Menlo, monospace',
@@ -37,7 +81,7 @@ function init() {
         cursorBlink: true
     });
     window.t = t;
-    window.game = {};
+    window.game = new Game();
     t.attachCustomKeyEventHandler(e => {
         //console.log(e);
         if (e.type === "keyup") {
@@ -49,14 +93,28 @@ function init() {
 }
 
 const styles = {
-    boldGreen: "\x1b[32;1m",
+    default: "\x1b[0m",
+    bold: "\x1b[1m",
+    italics: "\x1b[3m",
+
+    black: "\x1b[30m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    // TODO: Add orange or replacement
+    orange: "\x1b[33m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    magenta: "\x1b[35m",
+    cyan: "\x1b[36m",
+    white: "\x1b[37m",
+
+    // TODO: replace with combos
     boldRed: "\x1b[31;1m",
+    boldGreen: "\x1b[32;1m",
     boldYellow: "\x1b[33;1m",
     boldMagenta: "\x1b[35;1m",
-    magenta: "\x1b[35m",
     boldBlue: "\x1b[34;1m",
     boldCyan: "\x1b[36;1m",
-    default: "\x1b[0m"
 };
 
 function setStyle(style) {
@@ -152,13 +210,13 @@ async function menu(options, showOptions = true) {
     while (true) {
         try {
             setStyle(styles.magenta);
-            await type("<<");
+            await type("?? ");
             resetStyle();
 
             // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
             const key = await read();
             const numKey = parseInt(key.key);
-            setStyle(styles.magenta);
+            setStyle(styles.boldMagenta);
             await typeln(key.key);
             resetStyle();
             return options[numKey - 1].choice;
@@ -167,58 +225,6 @@ async function menu(options, showOptions = true) {
             console.error(error);
         }
     }
-}
-
-function parseNote(md) {
-    const fmIndex = md.indexOf("---");
-    if (fmIndex >= 0) {
-        const fmText = md.substring(0, fmIndex);
-        const meta = jsyaml.load(fmText);
-        return {
-            text: md.substring(fmIndex + 3),
-            original: md,
-            meta: meta
-        };
-    }
-    else {
-        // probably error
-        return {
-            text: md,
-            original: md,
-            meta: {}
-        };
-    }
-}
-
-// TODO: Need better error handling here
-async function fetchIndex() {
-    // TODO: Target website branch
-    const indexUrl = "https://api.github.com/repos/roman-yagodin/tgl/contents/data";
-    return fetch(indexUrl)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then((json) => {
-            game.index = json;
-            for (let entry of game.index) {
-                fetch(entry.download_url)
-                    .then((response) => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error: ${response.status}`);
-                        }
-                        return response.text();
-                    })
-                    .then((text) => {
-                        entry.content = text;
-                    });
-            }
-        })
-        .catch((error) => {
-            console.error(`Could not fetch verse: ${error}`);
-        });
 }
 
 // TODO: Need a way to go to any progress point for debug
@@ -232,6 +238,11 @@ function randomInt(from, to) {
     if (from > to) {
         throw new Error(`Argument "from" must be lesser or equal to the "to"`);
     }
+    
+    Math.random();
+    Math.random();
+    Math.random();
+
     return Math.floor(Math.random() * (to - from)) + from;
 }
 
@@ -276,34 +287,55 @@ async function scene1_door() {
 }
 
 async function scene2_greeting() {
-    // greeting
-    game.playerName = randomMsg(["@", "human", "humanoid", "reader", "operator", "dear", "darling", "child", "adventurer", "traveler"]);
-    game.actionCounter = randomInt(5, 10);
+    
+    game.loadOrNew();
+    
+    if (game.state.actionCounter <= 0) {
+        await tooExhausted();
+        return false;
+    }
 
+    // greeting
+    const hello = game.isNewGame() ? "Hello" : "Welcome back"
     setStyle(styles.boldGreen);
     await typeln();
-    await typeln(`> Hello, ${game.playerName}!`);
+    await typeln(`> ${hello}, ${game.state.playerName}!`);
     await typeln("> Take your time and have fun!");
     resetStyle();
 
     // fetch notes
     await typeln();
-    const p1 = progress("Fetching library index...");
-    const p2 = fetchIndex();
-    await Promise.all([p1, p2]);
+    await progress("Fetching library index...");
     
-    game.notes = game.index.map(entry => (parseNote(entry.content)));
-    console.log(game.notes);
+    game.notes = notes;
 
     await wait(_2s);
 
     // to the room
-    const noteIndex = randomInt(0, game.notes.length);
-    return scene4_room(noteIndex);
+    if (game.isNewGame()) {
+        // TODO: Get note from subset of starting notes
+        const noteIndex = randomInt(0, game.notes.length);
+        const note = game.notes[noteIndex];
+        game.state.breadCrumbs.push(note.guid);
+        game.saveState();
+        return scene4_room(note);
+    }
+    else {
+        const lastNoteGuid = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
+        const note = game.notes.find(n => (n.guid === lastNoteGuid));
+        if (note) {
+            return scene4_room(note);
+        }
+        else {
+            throw new Error(`Note not found: ${lastNoteGuid}`);
+        }
+    }
+
+    return false;
 }
 
 async function command(command) {
-    setStyle(styles.boldYellow);
+    setStyle(styles.bold + styles.yellow);
     await typeln("> " + command);
     resetStyle();
     
@@ -316,7 +348,7 @@ async function command(command) {
 }
 
 async function progress(message) {
-    setStyle(styles.boldRed);
+    setStyle(styles.bold + styles.red);
     await typeln(message);
     resetStyle();
 
@@ -340,24 +372,44 @@ async function copyToClipboard(text) {
     }
 }
 
-async function scene4_room(noteIndex) {
+async function tooExhausted() {
+    setStyle(styles.bold + styles.red);
+    await typeln();
+    await typeln("You are too exhausted, come back another day.");
+    resetStyle();
+}
 
-    // TODO: Store progress in local storage or cookie
-    // TODO: Randomized questions
+async function reachedEOW() {
+    setStyle(styles.bold + styles.red);
+    await typeln();
+    await typeln("You've reached the EOW and step back...");
+    await typeln();
+    resetStyle();
+}
+
+function randomNoteColor(note) {
+    const colorIndex = randomInt(0, note.meta.colors.length);
+    return note.meta.colors[colorIndex];
+}
+
+async function scene4_room(note) {
+
     let showNote = true;
     let showMenu = true;
     
+    let noteColor = randomNoteColor(note);
+
     while(true) {
-        const note = game.notes[noteIndex];
 
         if (showNote) {
             await command("CLS");
             const noteLines = note.text.split('\n');
 
-            setStyle(styles.boldCyan);
+            setStyle(styles[noteColor] + styles.italics);
             for (let i = 0; i < noteLines.length; i++) {
                 const line = noteLines[i];
-                await typeln('\t' + line);
+                // TODO: Add leading \t for desktop 
+                await typeln(line);
                 await wait(_hs);
             }
             resetStyle();
@@ -368,37 +420,71 @@ async function scene4_room(noteIndex) {
         }
 
         const choice = await menu([
-            { text: randomMsg(["Look left.", "Turn left.", "Turn counter-clockwise."]), choice: "left" },
-            { text: randomMsg(["Look right.", "Turn right.", "Turn clockwise."]), choice: "right" }, 
+            { text: "Cycle by author.", choice: "cycleByAuthor" },
+            { text: "Cycle by color.", choice: "cycleByColor" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint", choice: "hint" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
+        
+        game.decrementActionCounter();
+        if (game.state.actionCounter <= 0) {
+            await tooExhausted();
+            break;
+        }
 
-        if (choice === "left") {
-            game.actionCounter--;
-            noteIndex--;
-            if (noteIndex < 0) {
-                noteIndex = game.notes.length - 1;
+        if (choice === "cycleByAuthor") {
+            const nextNote = game.notes.find(n => {
+                // TODO: Check not only current note, but also breadcrumbs
+                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.guid)) {
+                    return true;
+                }
+                return false;
+            });
+
+            console.log({note: note, nextNote: nextNote});
+
+            if (nextNote) {
+                note = nextNote;
+                game.state.breadCrumbs.push(note.guid);
+                game.saveState();
             }
+            else {
+                await reachedEOW();
+            }
+
+            noteColor = randomNoteColor(note);
             showNote = true;
             showMenu = true;
         }
-        
-        if (choice === "right") {
-            game.actionCounter--;
-            noteIndex++;
-            if (noteIndex >= game.notes.length) {
-                noteIndex = 0;
+
+        if (choice === "cycleByColor") {
+            const nextNote = game.notes.find(n => {
+                // TODO: Check not only current note, but also breadcrumbs
+                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.guid)) {
+                    return true;
+                }
+                return false;
+            });
+
+            console.log({note: note, nextNote: nextNote});
+
+            if (nextNote) {
+                note = nextNote;
+                game.state.breadCrumbs.push(note.guid);
+                game.saveState();
+            }
+            else {
+                await reachedEOW();
+                noteColor = randomNoteColor(note);
             }
             showNote = true;
             showMenu = true;
         }
         
         if (choice === "copy") {
-            game.actionCounter--;
             const wasCopied = await copyToClipboard(note.original);
             await typeln();
             await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
@@ -406,29 +492,28 @@ async function scene4_room(noteIndex) {
         }
         
         if (choice === "author") {
-            game.actionCounter--;
             await typeln();
-            await type("The author is ");
-            setStyle(styles.boldCyan);
-            await typeln(note.meta.author);
-            resetStyle();
+            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}`);
             await typeln();
         }
         
         if (choice === "hint") {
-            game.actionCounter--;
             if (note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
                 const hint = note.meta.hints[hintIndex];
                 const hintLines = hint.split('\n');
 
+                await typeln();
                 for (let i = 0; i < hintLines.length; i++) {
                     const line = hintLines[i];
-                    await typeln('\t' + line);
+                    // TODO: Add leading \t for desktop 
+                    await typeln(line);
                     await wait(_hs);
                 }
+                await typeln();
             }
             else {
+                // TODO: Randomly deny hints, even there is some
                 await typeln();
                 await typeln("No hints available.");
                 await typeln();
@@ -436,14 +521,6 @@ async function scene4_room(noteIndex) {
         }
         
         if (choice === "leave") {
-            break;
-        }
-
-        if (game.actionCounter <= 0) {
-            setStyle(styles.boldRed);
-            await typeln();
-            await typeln("You are too exhaused, come back another day.");
-            resetStyle();
             break;
         }
     }
