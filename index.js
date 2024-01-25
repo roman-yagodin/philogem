@@ -43,6 +43,10 @@ class Game {
         this.state = {};
     }
 
+    isNewGame() {
+        return this.state.breadCrumbs.length === 0;
+    }
+
     loadOrNew() {
         const state = localStorage.getItem("tgl_game_state");
         if (state) {
@@ -234,6 +238,11 @@ function randomInt(from, to) {
     if (from > to) {
         throw new Error(`Argument "from" must be lesser or equal to the "to"`);
     }
+    
+    Math.random();
+    Math.random();
+    Math.random();
+
     return Math.floor(Math.random() * (to - from)) + from;
 }
 
@@ -287,9 +296,10 @@ async function scene2_greeting() {
     }
 
     // greeting
+    const hello = game.isNewGame() ? "Hello" : "Welcome back"
     setStyle(styles.boldGreen);
     await typeln();
-    await typeln(`> Hello, ${game.state.playerName}!`);
+    await typeln(`> ${hello}, ${game.state.playerName}!`);
     await typeln("> Take your time and have fun!");
     resetStyle();
 
@@ -302,12 +312,30 @@ async function scene2_greeting() {
     await wait(_2s);
 
     // to the room
-    const noteIndex = randomInt(0, game.notes.length);
-    return scene4_room(noteIndex);
+    if (game.isNewGame()) {
+        // TODO: Get note from subset of starting notes
+        const noteIndex = randomInt(0, game.notes.length);
+        const note = game.notes[noteIndex];
+        game.state.breadCrumbs.push(note.guid);
+        game.saveState();
+        return scene4_room(note);
+    }
+    else {
+        const lastNoteGuid = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
+        const note = game.notes.find(n => (n.guid === lastNoteGuid));
+        if (note) {
+            return scene4_room(note);
+        }
+        else {
+            throw new Error(`Note not found: ${lastNoteGuid}`);
+        }
+    }
+
+    return false;
 }
 
 async function command(command) {
-    setStyle(styles.boldYellow);
+    setStyle(styles.bold + styles.yellow);
     await typeln("> " + command);
     resetStyle();
     
@@ -320,7 +348,7 @@ async function command(command) {
 }
 
 async function progress(message) {
-    setStyle(styles.boldRed);
+    setStyle(styles.bold + styles.red);
     await typeln(message);
     resetStyle();
 
@@ -345,20 +373,31 @@ async function copyToClipboard(text) {
 }
 
 async function tooExhausted() {
-    setStyle(styles.boldRed);
+    setStyle(styles.bold + styles.red);
     await typeln();
     await typeln("You are too exhausted, come back another day.");
     resetStyle();
 }
 
-async function scene4_room(noteIndex) {
+async function reachedEOW() {
+    setStyle(styles.bold + styles.red);
+    await typeln();
+    await typeln("You've reached the EOW and step back...");
+    await typeln();
+    resetStyle();
+}
+
+function randomNoteColor(note) {
+    const colorIndex = randomInt(0, note.meta.colors.length);
+    return note.meta.colors[colorIndex];
+}
+
+async function scene4_room(note) {
 
     let showNote = true;
     let showMenu = true;
-
-    let note = game.notes[noteIndex];
-    const colorIndex = randomInt(0, note.meta.colors.length);
-    let noteColor = note.meta.colors[colorIndex];
+    
+    let noteColor = randomNoteColor(note);
 
     while(true) {
 
@@ -369,7 +408,8 @@ async function scene4_room(noteIndex) {
             setStyle(styles[noteColor] + styles.italics);
             for (let i = 0; i < noteLines.length; i++) {
                 const line = noteLines[i];
-                await typeln('\t' + line);
+                // TODO: Add leading \t for desktop 
+                await typeln(line);
                 await wait(_hs);
             }
             resetStyle();
@@ -398,7 +438,7 @@ async function scene4_room(noteIndex) {
         if (choice === "cycleByAuthor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
-                if (n.meta.author == note.meta.author && n.guid != note.guid) {
+                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.guid)) {
                     return true;
                 }
                 return false;
@@ -408,28 +448,22 @@ async function scene4_room(noteIndex) {
 
             if (nextNote) {
                 note = nextNote;
-                const colorIndex = randomInt(0, note.meta.colors.length);
-                noteColor = note.meta.colors[colorIndex];
-
-                showNote = true;
-                showMenu = true;
+                game.state.breadCrumbs.push(note.guid);
+                game.saveState();
             }
             else {
-                setStyle(styles.bold + styles.red);
-                await typeln();
-                await typeln("You've reached the EOW and step back...");
-                await typeln();
-                resetStyle();
-                
-                showNote = true;
-                showMenu = true;
+                await reachedEOW();
             }
+
+            noteColor = randomNoteColor(note);
+            showNote = true;
+            showMenu = true;
         }
 
         if (choice === "cycleByColor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
-                if (n.meta.colors.includes(noteColor) && n.guid != note.guid) {
+                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.guid)) {
                     return true;
                 }
                 return false;
@@ -439,19 +473,15 @@ async function scene4_room(noteIndex) {
 
             if (nextNote) {
                 note = nextNote;
-                showNote = true;
-                showMenu = true;
+                game.state.breadCrumbs.push(note.guid);
+                game.saveState();
             }
             else {
-                setStyle(styles.bold + styles.red);
-                await typeln();
-                await typeln("You've reached the EOW and step back...");
-                await typeln();
-                resetStyle();
-                
-                showNote = true;
-                showMenu = true;
+                await reachedEOW();
+                noteColor = randomNoteColor(note);
             }
+            showNote = true;
+            showMenu = true;
         }
         
         if (choice === "copy") {
@@ -463,10 +493,7 @@ async function scene4_room(noteIndex) {
         
         if (choice === "author") {
             await typeln();
-            await type("The author is ");
-            setStyle(styles.boldCyan);
-            await typeln(note.meta.author);
-            resetStyle();
+            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}`);
             await typeln();
         }
         
@@ -476,13 +503,17 @@ async function scene4_room(noteIndex) {
                 const hint = note.meta.hints[hintIndex];
                 const hintLines = hint.split('\n');
 
+                await typeln();
                 for (let i = 0; i < hintLines.length; i++) {
                     const line = hintLines[i];
-                    await typeln('\t' + line);
+                    // TODO: Add leading \t for desktop 
+                    await typeln(line);
                     await wait(_hs);
                 }
+                await typeln();
             }
             else {
+                // TODO: Randomly deny hints, even there is some
                 await typeln();
                 await typeln("No hints available.");
                 await typeln();
