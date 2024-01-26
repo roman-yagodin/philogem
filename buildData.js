@@ -1,5 +1,6 @@
 // to run script: node buildData.js
 
+const { subscribe } = require('diagnostics_channel');
 const fs = require('fs');
 const yaml = require('js-yaml');
 
@@ -25,14 +26,16 @@ function parseNote(md) {
 }
 
 const dataFolder = './data/';
-const fileNames = fs.readdirSync(dataFolder);
+const fileNames = fs.readdirSync(dataFolder, { recursive: true });
 const notes = [];
 
 fileNames.forEach(fileName => {
     if (fileName.endsWith(".md")) {
         const content = fs.readFileSync(`./data/${fileName}`, 'utf8');
         const note = parseNote(content);
-        note.guid = fileName.replace(/\.md/g, '');
+        const dirSepIndex = fileName.lastIndexOf("\\");
+        const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
+        note.guid = shortFileName.replace(/\.md/g, '');
         notes.push(note);
     }
 });

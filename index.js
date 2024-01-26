@@ -203,6 +203,7 @@ async function typeln(s) {
     
 // TODO: Bold/italics support
 async function type(s) {
+    s = s.replace("\\b", "\b");
     return new Promise((resolve) => {
         let i = 0;
         let j = 0;
