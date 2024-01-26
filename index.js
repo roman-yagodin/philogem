@@ -243,24 +243,6 @@ async function wait(delay) {
     });
 }
 
-async function read() {
-    await waitKey();
-    console.log(window.game.lastKey);
-    return window.game.lastKey;
-}
-
-async function waitKey() {
-    window.game.lastKey = null;
-    return new Promise((resolve) => {
-        const interval = setInterval(() => {
-            if (window.game.lastKey) {
-                clearInterval(interval);
-                resolve("done");
-            }
-        }, 100)
-    });
-}
-
 async function menu(options, showOptions = true) {
     // TODO: Randomize options order/numbering
     // TODO: Randomly exclude certain options
@@ -275,22 +257,48 @@ async function menu(options, showOptions = true) {
     }
 
     while (true) {
-        try {
-            setStyle(styles.magenta);
-            await type("?? ");
-            resetStyle();
-
-            // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
-            const key = await read();
-            const numKey = parseInt(key.key);
-            setStyle(styles.boldMagenta);
-            await typeln(key.key);
-            resetStyle();
+        const key = await readKey();
+        const numKey = parseInt(key);
+        if (numKey !== NaN && numKey >= 1 && numKey <= options.length) {
             return options[numKey - 1].choice;
         }
-        catch (error) {
-            console.error(error);
+    }
+}
+
+async function waitKey() {
+    window.game.lastKey = null;
+    return new Promise((resolve) => {
+        const interval = setInterval(() => {
+            if (window.game.lastKey) {
+                clearInterval(interval);
+                console.log({key: window.game.lastKey});
+                resolve(window.game.lastKey);
+            }
+        }, 100)
+    });
+}
+
+async function readKey(echo = true) {
+    while (true) {
+
+        // prompt
+        setStyle(styles.magenta);
+        await type("?? ");
+        resetStyle();
+
+        // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
+        const key = await waitKey();
+
+        if (echo) {
+            setStyle(styles.bold + styles.magenta);
+            await typeln(key.key);
+            resetStyle();
         }
+        else {
+            await type("\b\b\b");
+        }
+
+        return key.key;
     }
 }
 
@@ -457,8 +465,9 @@ async function copyToClipboard(text) {
 async function tooExhausted() {
     setStyle(styles.bold + styles.red);
     await typeln();
+    const hasty = ["hasty", "exhausted"];
     const later = ["another day", "later", "tomorrow"];
-    await typeln(`You are too exhausted, come back ${randomMsg(later)}.`);
+    await typeln(`You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
     resetStyle();
 }
 
@@ -475,6 +484,19 @@ function randomNoteColor(note) {
     return note.meta.colors[colorIndex];
 }
 
+async function typeNote(note, noteColor) {
+    const noteLines = note.text.split('\n');
+    setStyle(styles.bold + styles[noteColor]);
+    for (let i = 0; i < noteLines.length; i++) {
+        const line = noteLines[i];
+        // TODO: Add leading \t for desktop 
+        await typeln("▉ " + line);
+        await wait(_hs);
+    }
+    resetStyle();
+    await typeln();
+}
+
 async function scene4_world(note) {
 
     let showNote = true;
@@ -485,20 +507,10 @@ async function scene4_world(note) {
 
         if (showNote) {
             await command("CLS");
-            const noteLines = note.text.split('\n');
-
-            setStyle(styles.bold + styles[noteColor]);
-            for (let i = 0; i < noteLines.length; i++) {
-                const line = noteLines[i];
-                // TODO: Add leading \t for desktop 
-                await typeln(line);
-                await wait(_hs);
-            }
-            resetStyle();
-
-            await typeln();
-            await wait(_5s);
+            await typeNote(note, noteColor);
             showNote = false;
+
+            await readKey(false);
         }
 
         const choice = await menu([
