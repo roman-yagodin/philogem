@@ -1,3 +1,5 @@
+const DEBUG = false; // set to false before publish!
+
 const EOL = "\n\r";
 const _1t = 10; // type interval
 
@@ -30,13 +32,25 @@ const baseTheme = {
     brightWhite: '#FFFFFF'
 };
 
-class GameState {
-    constructor() {
-        this.actionCounter = 0;
-        this.playerName = "";
-        this.breadCrumbs = [];
-    }
-}
+const playerNames = [
+    "@",
+    "player",
+    "user",
+    "operator",
+    "human",
+    "humanoid",
+    "creature",
+    "creator",
+    "reader",
+    "dear",
+    "darling",
+    "precious",
+    "friend",
+    "child",
+    "adventurer",
+    "traveler",
+    "wanderer",
+];
 
 class Game {
     constructor() {
@@ -44,19 +58,28 @@ class Game {
     }
 
     isNewGame() {
-        return this.state.breadCrumbs.length === 0;
+        return this.state.breadCrumbs && this.state.breadCrumbs.length === 0;
     }
 
     loadOrNew() {
-        const state = localStorage.getItem("tgl_game_state");
-        if (state) {
-            this.state = JSON.parse(state);
+        const stateStr = localStorage.getItem("tgl_game_state");
+        if (stateStr) {
+            this.state = JSON.parse(stateStr);
+            // TODO: Try-catch
+            // TODO: Check format of resulting state - if may be from old version
         }
         else {
-            this.state = new GameState();
-            this.state.playerName = randomMsg(["@", "human", "humanoid", "reader", "operator", "dear", "darling", "child", "adventurer", "traveler"]);
-            this.state.actionCounter = randomInt(5, 10);
+            this.state = {
+                actionCounter: 0,
+                playerName: randomMsg(playerNames),
+                returnAfter: null,
+                breadCrumbs: []
+            };
+
+            this.resetActionCounter();
         }
+
+        this.notes = notes;
 
         this.saveState();
     }
@@ -65,12 +88,56 @@ class Game {
         localStorage.setItem("tgl_game_state", JSON.stringify(this.state));
     }
 
+    resetActionCounter() {
+        this.state.actionCounter = randomInt(10, 15);
+        return this.state.actionCounter;
+    }
+
     decrementActionCounter() {
         this.state.actionCounter--;
         if (this.state.actionCounter < 0) {
             this.state.actionCounter = 0;
         }
-        this.saveState();
+
+        if (this.state.actionCounter === 0) {
+            this.setReturnAfter();
+        }
+
+        return this.state.actionCounter;
+    }
+
+    setReturnAfter() {
+        const nowDate = new Date();
+        const returnAfterDate = new Date();
+        returnAfterDate.setHours(nowDate.getHours() + 12);
+
+        this.state.returnAfter = returnAfterDate;
+
+        console.log({ nowDate: nowDate, returnAfterDate: returnAfterDate });
+    }
+
+    checkReturnAfter() {
+        // don't check returnAfter date when debugging
+        if (DEBUG) {
+            return true;
+        }
+
+        if (typeof this.state.returnAfter === "undefined" || !this.state.returnAfter) {
+            return true;
+        }
+
+        const nowDate = new Date();
+        if (this.state.returnAfter && nowDate >= this.state.returnAfter) {
+            return true;
+        }
+        return false;
+    }
+
+    getStartNote() {
+        // TODO: Other starting authors?
+        const startNotes = game.notes.filter(n => (n.meta.author === "Lewis Carroll"));
+        const startNoteIndex = randomInt(0, startNotes.length);
+        return startNotes[startNoteIndex];
     }
 }
 
@@ -136,6 +203,7 @@ async function typeln(s) {
     
 // TODO: Bold/italics support
 async function type(s) {
+    s = s.replace("\\b", "\b");
     return new Promise((resolve) => {
         let i = 0;
         let j = 0;
@@ -176,24 +244,6 @@ async function wait(delay) {
     });
 }
 
-async function read() {
-    await waitKey();
-    console.log(window.game.lastKey);
-    return window.game.lastKey;
-}
-
-async function waitKey() {
-    window.game.lastKey = null;
-    return new Promise((resolve) => {
-        const interval = setInterval(() => {
-            if (window.game.lastKey) {
-                clearInterval(interval);
-                resolve("done");
-            }
-        }, 100)
-    });
-}
-
 async function menu(options, showOptions = true) {
     // TODO: Randomize options order/numbering
     // TODO: Randomly exclude certain options
@@ -208,22 +258,48 @@ async function menu(options, showOptions = true) {
     }
 
     while (true) {
-        try {
-            setStyle(styles.magenta);
-            await type("?? ");
-            resetStyle();
-
-            // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
-            const key = await read();
-            const numKey = parseInt(key.key);
-            setStyle(styles.boldMagenta);
-            await typeln(key.key);
-            resetStyle();
+        const key = await readKey();
+        const numKey = parseInt(key);
+        if (numKey !== NaN && numKey >= 1 && numKey <= options.length) {
             return options[numKey - 1].choice;
         }
-        catch (error) {
-            console.error(error);
+    }
+}
+
+async function waitKey() {
+    window.game.lastKey = null;
+    return new Promise((resolve) => {
+        const interval = setInterval(() => {
+            if (window.game.lastKey) {
+                clearInterval(interval);
+                console.log({key: window.game.lastKey});
+                resolve(window.game.lastKey);
+            }
+        }, 100)
+    });
+}
+
+async function readKey(echo = true) {
+    while (true) {
+
+        // prompt
+        setStyle(styles.magenta);
+        await type("?? ");
+        resetStyle();
+
+        // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
+        const key = await waitKey();
+
+        if (echo) {
+            setStyle(styles.bold + styles.magenta);
+            await typeln(key.key);
+            resetStyle();
         }
+        else {
+            await type("\b\b\b");
+        }
+
+        return key.key;
     }
 }
 
@@ -236,14 +312,24 @@ async function main() {
 
 function randomInt(from, to) {
     if (from > to) {
-        throw new Error(`Argument "from" must be lesser or equal to the "to"`);
+        throw new Error(`Argument "from" must be lesser or equal to the "to".`);
     }
     
     Math.random();
     Math.random();
     Math.random();
-
     return Math.floor(Math.random() * (to - from)) + from;
+}
+
+function randomYes(prob) {
+    if (prob < 0.0 || prob > 1.0) {
+        throw new Error(`Argument "prob" must be in [0..1] range.`);
+    }
+
+    Math.random();
+    Math.random();
+    Math.random();
+    return prob >= Math.random();
 }
 
 async function scene1_door() {
@@ -262,11 +348,10 @@ async function scene1_door() {
     ]);
     
     if (choice === "everything") {
-        const x = randomInt(0, 10);
-        if (x >= 5) {
+        if (randomYes(0.5)) {
             choice = "thing";
-            setStyle(styles.boldRed);
-            await typeln("Well, let's believe you, this time...");
+            setStyle(styles.bold + styles.red);
+            await typeln("Well, let's believe you -- *this* time...");
             resetStyle();
         }
         else {
@@ -290,43 +375,49 @@ async function scene2_greeting() {
     
     game.loadOrNew();
     
-    if (game.state.actionCounter <= 0) {
+    if (!game.checkReturnAfter()) {
         await tooExhausted();
         return false;
+    }
+    else {
+        if (game.state.actionCounter <= 0) {
+            game.resetActionCounter();
+            game.saveState();
+        }
     }
 
     // greeting
     const hello = game.isNewGame() ? "Hello" : "Welcome back"
-    setStyle(styles.boldGreen);
+    setStyle(styles.bold + styles.green);
     await typeln();
-    await typeln(`> ${hello}, ${game.state.playerName}!`);
+    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}!${styles.green}`);
     await typeln("> Take your time and have fun!");
     resetStyle();
 
-    // fetch notes
-    await typeln();
-    await progress("Fetching library index...");
-    
-    game.notes = notes;
+    // TODO: Main menu
 
+    setStyle(styles.bold + styles.red);
+    await typeln();
+    await type("Imagining the world... ");
+    await wait(_4s);
+    await typeln("Done.");
     await wait(_2s);
 
-    // to the room
+    // to the world
     if (game.isNewGame()) {
-        // TODO: Get note from subset of starting notes
-        const noteIndex = randomInt(0, game.notes.length);
-        const note = game.notes[noteIndex];
+        const note = game.getStartNote();
         game.state.breadCrumbs.push(note.guid);
         game.saveState();
-        return scene4_room(note);
+        return scene4_world(note);
     }
     else {
         const lastNoteGuid = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
         const note = game.notes.find(n => (n.guid === lastNoteGuid));
         if (note) {
-            return scene4_room(note);
+            return scene4_world(note);
         }
         else {
+            // TODO: Your track is lost, return to main menu?
             throw new Error(`Note not found: ${lastNoteGuid}`);
         }
     }
@@ -375,14 +466,16 @@ async function copyToClipboard(text) {
 async function tooExhausted() {
     setStyle(styles.bold + styles.red);
     await typeln();
-    await typeln("You are too exhausted, come back another day.");
+    const hasty = ["hasty", "exhausted"];
+    const later = ["another day", "later", "tomorrow"];
+    await typeln(`You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
     resetStyle();
 }
 
 async function reachedEOW() {
     setStyle(styles.bold + styles.red);
     await typeln();
-    await typeln("You've reached the EOW and step back...");
+    await typeln("You've reached the end of the world and stepped back...");
     await typeln();
     resetStyle();
 }
@@ -392,50 +485,54 @@ function randomNoteColor(note) {
     return note.meta.colors[colorIndex];
 }
 
-async function scene4_room(note) {
+async function typeNote(note, noteColor) {
+    const noteLines = note.text.split('\n');
+    setStyle(styles.bold + styles[noteColor]);
+    for (let i = 0; i < noteLines.length; i++) {
+        const line = noteLines[i];
+        // TODO: Add leading \t for desktop 
+        await typeln("▉ " + line);
+        await wait(_hs);
+    }
+    resetStyle();
+    await typeln();
+}
+
+async function scene4_world(note) {
 
     let showNote = true;
     let showMenu = true;
-    
     let noteColor = randomNoteColor(note);
 
     while(true) {
 
         if (showNote) {
             await command("CLS");
-            const noteLines = note.text.split('\n');
-
-            setStyle(styles[noteColor] + styles.italics);
-            for (let i = 0; i < noteLines.length; i++) {
-                const line = noteLines[i];
-                // TODO: Add leading \t for desktop 
-                await typeln(line);
-                await wait(_hs);
-            }
-            resetStyle();
-
-            await typeln();
-            await wait(_5s);
+            await typeNote(note, noteColor);
             showNote = false;
+
+            await readKey(false);
         }
 
         const choice = await menu([
-            { text: "Cycle by author.", choice: "cycleByAuthor" },
-            { text: "Cycle by color.", choice: "cycleByColor" },
+            { text: "Forward by author.", choice: "forwardByAuthor" },
+            { text: "Forward by color.", choice: "forwardByColor" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
-            { text: "Show hint", choice: "hint" },
+            { text: "Show hint.", choice: "hint" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
         
         game.decrementActionCounter();
+        game.saveState();
+
         if (game.state.actionCounter <= 0) {
             await tooExhausted();
             break;
         }
 
-        if (choice === "cycleByAuthor") {
+        if (choice === "forwardByAuthor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.guid)) {
@@ -460,7 +557,7 @@ async function scene4_room(note) {
             showMenu = true;
         }
 
-        if (choice === "cycleByColor") {
+        if (choice === "forwardByColor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.guid)) {
@@ -484,6 +581,7 @@ async function scene4_room(note) {
             showMenu = true;
         }
         
+        // TODO: Move to review mode
         if (choice === "copy") {
             const wasCopied = await copyToClipboard(note.original);
             await typeln();
