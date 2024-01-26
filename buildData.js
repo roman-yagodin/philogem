@@ -36,7 +36,13 @@ fileNames.forEach(fileName => {
         const dirSepIndex = fileName.lastIndexOf("\\");
         const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
         note.guid = shortFileName.replace(/\.md/g, '');
-        notes.push(note);
+        const existingNote = notes.find(n => (n.quid === note.guid));
+        if (!existingNote) {
+            notes.push(note);
+        }
+        else {
+            console.error(`Duplicate GUID: ${note.guid}.`);
+        }
     }
 });
 
