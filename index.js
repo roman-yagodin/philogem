@@ -1,4 +1,4 @@
-const DEBUG = false; // set to false before publish!
+const DEBUG = true; // set to false before publish!
 
 const EOL = "\n\r";
 const _1t = 10; // type interval
@@ -30,6 +30,26 @@ const baseTheme = {
     brightCyan: '#72F0FF',
     white: '#F8F8F8',
     brightWhite: '#FFFFFF'
+};
+
+const styles = {
+    default: "\x1b[0m",
+    bold: "\x1b[1m",
+    faint: "\x1b[2m",
+    italics: "\x1b[3m",
+    nonBold: "\x1b[22m", // neither bold nor faint
+    nonItalics: "\x1b[23m",
+    
+    // TODO: Reuse black for orange?
+    black: "\x1b[30m",
+    orange: "\x1b[30m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    magenta: "\x1b[35m",
+    cyan: "\x1b[36m",
+    white: "\x1b[37m",
 };
 
 const playerNames = [
@@ -159,31 +179,6 @@ function init() {
     t.focus();
 }
 
-const styles = {
-    default: "\x1b[0m",
-    bold: "\x1b[1m",
-    italics: "\x1b[3m",
-
-    black: "\x1b[30m",
-    red: "\x1b[31m",
-    green: "\x1b[32m",
-    // TODO: Add orange or replacement
-    orange: "\x1b[33m",
-    yellow: "\x1b[33m",
-    blue: "\x1b[34m",
-    magenta: "\x1b[35m",
-    cyan: "\x1b[36m",
-    white: "\x1b[37m",
-
-    // TODO: replace with combos
-    boldRed: "\x1b[31;1m",
-    boldGreen: "\x1b[32;1m",
-    boldYellow: "\x1b[33;1m",
-    boldMagenta: "\x1b[35;1m",
-    boldBlue: "\x1b[34;1m",
-    boldCyan: "\x1b[36;1m",
-};
-
 function setStyle(style) {
     t.write(style);
 }
@@ -201,9 +196,18 @@ async function typeln(s) {
     }
 }
     
-// TODO: Bold/italics support
 async function type(s) {
+    
     s = s.replace("\\b", "\b");
+
+    // bold
+    s = s.replace(/\*([^\s\.,;:!\?-])/g, styles.bold + "$1");
+    s = s.replace(/\*([\s\.,;:!\?-])/g, styles.nonBold + "$1");
+
+    // italics
+    s = s.replace(/\_([^\s\.,;:!\?-])/g, styles.italics + "$1");
+    s = s.replace(/\_([\s\.,;:!\?-])/g, styles.nonItalics + "$1");
+
     return new Promise((resolve) => {
         let i = 0;
         let j = 0;
@@ -292,7 +296,7 @@ async function readKey(echo = true) {
 
         if (echo) {
             setStyle(styles.bold + styles.magenta);
-            await typeln(key.key);
+            await typeln("\b\b\b<< " + key.key);
             resetStyle();
         }
         else {
@@ -343,7 +347,7 @@ async function scene1_door() {
     let choice = await menu([
         { text: "I feel *something*!", choice: "thing" },
         { text: "I don't feel anything...", choice: "nothing" },
-        { text: "I do *feel* anything.", choice: "thing" },
+        { text: "I do _feel_ anything.", choice: "thing" },
         { text: "I feel EVERYTHING!..", choice: "everything" }
     ]);
     
@@ -406,19 +410,19 @@ async function scene2_greeting() {
     // to the world
     if (game.isNewGame()) {
         const note = game.getStartNote();
-        game.state.breadCrumbs.push(note.guid);
+        game.state.breadCrumbs.push(note.id);
         game.saveState();
         return scene4_world(note);
     }
     else {
-        const lastNoteGuid = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
-        const note = game.notes.find(n => (n.guid === lastNoteGuid));
+        const lastNoteId = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
+        const note = game.notes.find(n => (n.id === lastNoteId));
         if (note) {
             return scene4_world(note);
         }
         else {
             // TODO: Your track is lost, return to main menu?
-            throw new Error(`Note not found: ${lastNoteGuid}`);
+            throw new Error(`Note not found: ${lastNoteId}`);
         }
     }
 
@@ -515,8 +519,8 @@ async function scene4_world(note) {
         }
 
         const choice = await menu([
-            { text: "Forward by author.", choice: "forwardByAuthor" },
-            { text: "Forward by color.", choice: "forwardByColor" },
+            { text: "Follow author.", choice: "followAuthor" },
+            { text: "Follow color.", choice: "followColor" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint.", choice: "hint" },
@@ -532,10 +536,10 @@ async function scene4_world(note) {
             break;
         }
 
-        if (choice === "forwardByAuthor") {
+        if (choice === "followAuthor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
-                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.guid)) {
+                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
@@ -545,7 +549,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.guid);
+                game.state.breadCrumbs.push(note.id);
                 game.saveState();
             }
             else {
@@ -557,10 +561,10 @@ async function scene4_world(note) {
             showMenu = true;
         }
 
-        if (choice === "forwardByColor") {
+        if (choice === "followColor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
-                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.guid)) {
+                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
@@ -570,7 +574,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.guid);
+                game.state.breadCrumbs.push(note.id);
                 game.saveState();
             }
             else {

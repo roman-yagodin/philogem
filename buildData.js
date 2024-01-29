@@ -1,6 +1,5 @@
 // to run script: node buildData.js
 
-const { subscribe } = require('diagnostics_channel');
 const fs = require('fs');
 const yaml = require('js-yaml');
 
@@ -35,13 +34,13 @@ fileNames.forEach(fileName => {
         const note = parseNote(content);
         const dirSepIndex = fileName.lastIndexOf("\\");
         const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
-        note.guid = shortFileName.replace(/\.md/g, '');
-        const existingNote = notes.find(n => (n.quid === note.guid));
+        note.id = shortFileName.replace(/\.md/g, '');
+        const existingNote = notes.find(n => (n.quid === note.id));
         if (!existingNote) {
             notes.push(note);
         }
         else {
-            console.error(`Duplicate GUID: ${note.guid}.`);
+            console.error(`Duplicate note id: ${note.id}.`);
         }
     }
 });
