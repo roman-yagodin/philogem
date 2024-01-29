@@ -410,19 +410,19 @@ async function scene2_greeting() {
     // to the world
     if (game.isNewGame()) {
         const note = game.getStartNote();
-        game.state.breadCrumbs.push(note.guid);
+        game.state.breadCrumbs.push(note.id);
         game.saveState();
         return scene4_world(note);
     }
     else {
-        const lastNoteGuid = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
-        const note = game.notes.find(n => (n.guid === lastNoteGuid));
+        const lastNoteId = game.state.breadCrumbs[game.state.breadCrumbs.length - 1];
+        const note = game.notes.find(n => (n.id === lastNoteId));
         if (note) {
             return scene4_world(note);
         }
         else {
             // TODO: Your track is lost, return to main menu?
-            throw new Error(`Note not found: ${lastNoteGuid}`);
+            throw new Error(`Note not found: ${lastNoteId}`);
         }
     }
 
@@ -539,7 +539,7 @@ async function scene4_world(note) {
         if (choice === "followAuthor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
-                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.guid)) {
+                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
@@ -549,7 +549,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.guid);
+                game.state.breadCrumbs.push(note.id);
                 game.saveState();
             }
             else {
@@ -564,7 +564,7 @@ async function scene4_world(note) {
         if (choice === "followColor") {
             const nextNote = game.notes.find(n => {
                 // TODO: Check not only current note, but also breadcrumbs
-                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.guid)) {
+                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
@@ -574,7 +574,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.guid);
+                game.state.breadCrumbs.push(note.id);
                 game.saveState();
             }
             else {
