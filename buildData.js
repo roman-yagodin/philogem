@@ -1,6 +1,5 @@
 // to run script: node buildData.js
 
-const { subscribe } = require('diagnostics_channel');
 const fs = require('fs');
 const yaml = require('js-yaml');
 
