@@ -14,7 +14,8 @@ const baseTheme = {
     foreground: '#F8F8F8',
     background: '#2D2E2C',
     selection: '#5DA5D533',
-    black: '#1E1E1D',
+    //black: '#1E1E1D', 
+    black: '#FFA500', // reuse black for orange (1)
     brightBlack: '#262625',
     red: '#CE5C5C',
     brightRed: '#FF7272',
@@ -39,17 +40,14 @@ const styles = {
     italics: "\x1b[3m",
     nonBold: "\x1b[22m", // neither bold nor faint
     nonItalics: "\x1b[23m",
-    
-    // TODO: Reuse black for orange?
-    black: "\x1b[30m",
-    orange: "\x1b[30m",
+    orange: "\x1b[30m", // reuse black for orange (2)
     red: "\x1b[31m",
     green: "\x1b[32m",
     yellow: "\x1b[33m",
     blue: "\x1b[34m",
     magenta: "\x1b[35m",
     cyan: "\x1b[36m",
-    white: "\x1b[37m",
+    white: "\x1b[37m"
 };
 
 const playerNames = [
@@ -341,7 +339,7 @@ async function scene1_door() {
     await wait(_hs);
     await typeln("Do you feel anything?");
     await typeln();
-    
+
     await wait(_5s);
 
     let choice = await menu([
