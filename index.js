@@ -253,8 +253,10 @@ async function menu(options, showOptions = true) {
     if (showOptions) {
         setStyle(styles.magenta);
         for (let i = 0; i < options.length; i++) {
-            await typeln(`${i + 1}. ${options[i].text}`);
-            await wait(_hs);
+            if (i === 0) {
+                await typeln(`${i}. ${options[i].text}`);
+                await wait(_hs);
+            }
         }
         resetStyle();
     }
@@ -262,8 +264,8 @@ async function menu(options, showOptions = true) {
     while (true) {
         const key = await readKey();
         const numKey = parseInt(key);
-        if (numKey !== NaN && numKey >= 1 && numKey <= options.length) {
-            return options[numKey - 1].choice;
+        if (numKey !== NaN && numKey >= 0 && numKey < options.length) {
+            return options[numKey].choice;
         }
     }
 }
@@ -343,6 +345,7 @@ async function scene1_door() {
     await wait(_5s);
 
     let choice = await menu([
+        { text: "", choice: "nothing" },
         { text: "I feel *something*!", choice: "thing" },
         { text: "I don't feel anything...", choice: "nothing" },
         { text: "I do _feel_ anything.", choice: "thing" },
@@ -517,6 +520,7 @@ async function scene4_world(note) {
         }
 
         const choice = await menu([
+            { text: "", choice: "showMenu" },
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
             { text: "Copy the note.", choice: "copy" },
@@ -532,6 +536,10 @@ async function scene4_world(note) {
         if (game.state.actionCounter <= 0) {
             await tooExhausted();
             break;
+        }
+
+        if (choice === "showMenu") {
+            showMenu = true;
         }
 
         if (choice === "followAuthor") {
