@@ -1,4 +1,4 @@
-const DEBUG = true; // set to false before publish!
+const DEBUG = false; // set to false before publish!
 
 const EOL = "\n\r";
 const _1t = 10; // type interval
@@ -14,8 +14,10 @@ const baseTheme = {
     foreground: '#F8F8F8',
     background: '#2D2E2C',
     selection: '#5DA5D533',
-    black: '#1E1E1D',
-    brightBlack: '#262625',
+    // black: '#1E1E1D', 
+    // brightBlack: '#262625',
+    black: '#CE8500', // reuse black for orange (1)
+    brightBlack: '#FFA500',
     red: '#CE5C5C',
     brightRed: '#FF7272',
     green: '#5BCC5B',
@@ -39,17 +41,14 @@ const styles = {
     italics: "\x1b[3m",
     nonBold: "\x1b[22m", // neither bold nor faint
     nonItalics: "\x1b[23m",
-    
-    // TODO: Reuse black for orange?
-    black: "\x1b[30m",
-    orange: "\x1b[30m",
+    orange: "\x1b[30m", // reuse black for orange (2)
     red: "\x1b[31m",
     green: "\x1b[32m",
     yellow: "\x1b[33m",
     blue: "\x1b[34m",
     magenta: "\x1b[35m",
     cyan: "\x1b[36m",
-    white: "\x1b[37m",
+    white: "\x1b[37m"
 };
 
 const playerNames = [
@@ -113,8 +112,8 @@ class Game {
         return this.state.actionCounter;
     }
 
-    decrementActionCounter() {
-        this.state.actionCounter--;
+    decrementActionCounter(n = 1) {
+        this.state.actionCounter -= n;
         if (this.state.actionCounter < 0) {
             this.state.actionCounter = 0;
         }
@@ -126,6 +125,12 @@ class Game {
         return this.state.actionCounter;
     }
 
+    incrementActionCounter(n) {
+        this.state.actionCounter += n;
+        this.resetReturnAfter();
+        return this.state.actionCounter;
+    }
+
     setReturnAfter() {
         const nowDate = new Date();
         const returnAfterDate = new Date();
@@ -134,6 +139,10 @@ class Game {
         this.state.returnAfter = returnAfterDate;
 
         console.log({ nowDate: nowDate, returnAfterDate: returnAfterDate });
+    }
+
+    resetReturnAfter() {
+        this.state.returnAfter = null;
     }
 
     checkReturnAfter() {
@@ -163,6 +172,7 @@ class Game {
 
 function init() {
     const t = new Terminal({
+        // TODO: Review font list
         fontFamily: '"Cascadia Code", Menlo, monospace',
         theme: baseTheme,
         cursorBlink: true
@@ -250,13 +260,15 @@ async function wait(delay) {
 
 async function menu(options, showOptions = true) {
     // TODO: Randomize options order/numbering
-    // TODO: Randomly exclude certain options
+    // TODO: Randomly exclude excludable options
 
     if (showOptions) {
         setStyle(styles.magenta);
         for (let i = 0; i < options.length; i++) {
-            await typeln(`${i + 1}. ${options[i].text}`);
-            await wait(_hs);
+            if (i > 0) {
+                await typeln(`${i}. ${options[i].text}`);
+                await wait(_hs);
+            }
         }
         resetStyle();
     }
@@ -264,8 +276,8 @@ async function menu(options, showOptions = true) {
     while (true) {
         const key = await readKey();
         const numKey = parseInt(key);
-        if (numKey !== NaN && numKey >= 1 && numKey <= options.length) {
-            return options[numKey - 1].choice;
+        if (numKey !== NaN && numKey >= 0 && numKey < options.length) {
+            return options[numKey].choice;
         }
     }
 }
@@ -283,12 +295,12 @@ async function waitKey() {
     });
 }
 
-async function readKey(echo = true) {
+async function readKey(prompt = "?? ", echo = true) {
     while (true) {
 
         // prompt
-        setStyle(styles.magenta);
-        await type("?? ");
+        setStyle(styles.faint + styles.magenta);
+        await type(prompt);
         resetStyle();
 
         // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
@@ -296,18 +308,17 @@ async function readKey(echo = true) {
 
         if (echo) {
             setStyle(styles.bold + styles.magenta);
-            await typeln("\b\b\b<< " + key.key);
+            await typeln("\b".repeat(prompt.length) + "<< " + key.key);
             resetStyle();
         }
         else {
-            await type("\b\b\b");
+            await type("\b".repeat(prompt.length));
         }
 
         return key.key;
     }
 }
 
-// TODO: Need a way to go to any progress point for debug
 async function main() {
     await scene1_door();
     await typeln();
@@ -341,10 +352,11 @@ async function scene1_door() {
     await wait(_hs);
     await typeln("Do you feel anything?");
     await typeln();
-    
+
     await wait(_5s);
 
     let choice = await menu([
+        { text: "", choice: "nothing" },
         { text: "I feel *something*!", choice: "thing" },
         { text: "I don't feel anything...", choice: "nothing" },
         { text: "I do _feel_ anything.", choice: "thing" },
@@ -402,9 +414,16 @@ async function scene2_greeting() {
 
     setStyle(styles.bold + styles.red);
     await typeln();
-    await type("Imagining the world... ");
+
+    if (game.isNewGame()) {
+        await type(`${randomMsg(["Imagining", "Creating"])} the world... `);
+    }
+    else {
+        await type(`${randomMsg(["Re-imagining", "Re-creating"])} the world... `);
+    }
+    
     await wait(_4s);
-    await typeln("Done.");
+    await typeln(randomMsg(["Done.", "Done.", "Done.", "Clap!", "Slap!", "Plop!", "Boom!"]));
     await wait(_2s);
 
     // to the world
@@ -439,6 +458,7 @@ async function command(command) {
         t.clear();
     }
 
+    await wait(_1s);
     return true;
 }
 
@@ -494,8 +514,8 @@ async function typeNote(note, noteColor) {
     setStyle(styles.bold + styles[noteColor]);
     for (let i = 0; i < noteLines.length; i++) {
         const line = noteLines[i];
-        // TODO: Add leading \t for desktop 
-        await typeln("▉ " + line);
+        // TODO: Add leading \t for desktop?
+        await typeln("▌ " + line);
         await wait(_hs);
     }
     resetStyle();
@@ -511,17 +531,22 @@ async function scene4_world(note) {
     while(true) {
 
         if (showNote) {
+            await typeln();
             await command("CLS");
             await typeNote(note, noteColor);
             showNote = false;
 
-            await readKey(false);
+            await readKey("...", false);
         }
 
         const choice = await menu([
+            { text: "", choice: "showMenu" },
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
+            { text: "Follow language.", choice: "followLanguage" },
+            // TODO: Move utilities to submenu or review mode?
             { text: "Copy the note.", choice: "copy" },
+            // TODO: Combine with hint
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint.", choice: "hint" },
             { text: "Leave...", choice: "leave" },
@@ -536,16 +561,18 @@ async function scene4_world(note) {
             break;
         }
 
+        if (choice === "showMenu") {
+            await typeln();
+            showMenu = true;
+        }
+
         if (choice === "followAuthor") {
             const nextNote = game.notes.find(n => {
-                // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
             });
-
-            console.log({note: note, nextNote: nextNote});
 
             if (nextNote) {
                 note = nextNote;
@@ -563,14 +590,32 @@ async function scene4_world(note) {
 
         if (choice === "followColor") {
             const nextNote = game.notes.find(n => {
-                // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
             });
 
-            console.log({note: note, nextNote: nextNote});
+            if (nextNote) {
+                note = nextNote;
+                game.state.breadCrumbs.push(note.id);
+                game.saveState();
+            }
+            else {
+                await reachedEOW();
+                noteColor = randomNoteColor(note);
+            }
+            showNote = true;
+            showMenu = true;
+        }
+
+        if (choice === "followLanguage") {
+            const nextNote = game.notes.find(n => {
+                if (n.meta.lang === note.meta.lang && !game.state.breadCrumbs.includes(n.id)) {
+                    return true;
+                }
+                return false;
+            });
 
             if (nextNote) {
                 note = nextNote;
@@ -585,7 +630,6 @@ async function scene4_world(note) {
             showMenu = true;
         }
         
-        // TODO: Move to review mode
         if (choice === "copy") {
             const wasCopied = await copyToClipboard(note.original);
             await typeln();
@@ -595,7 +639,7 @@ async function scene4_world(note) {
         
         if (choice === "author") {
             await typeln();
-            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}`);
+            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
             await typeln();
         }
         
@@ -608,8 +652,8 @@ async function scene4_world(note) {
                 await typeln();
                 for (let i = 0; i < hintLines.length; i++) {
                     const line = hintLines[i];
-                    // TODO: Add leading \t for desktop 
-                    await typeln(line);
+                    // TODO: Add leading \t for desktop?
+                    await typeln("▌ " + line);
                     await wait(_hs);
                 }
                 await typeln();
@@ -623,6 +667,13 @@ async function scene4_world(note) {
         }
         
         if (choice === "leave") {
+            game.incrementActionCounter(randomInt(5, 10));
+            game.saveState();
+            setStyle(styles.bold + styles.green);
+            await typeln();
+            await typeln(`> Goodbye, ${styles.cyan}${game.state.playerName}${styles.green}! And come back soon.`);
+            await typeln();
+            resetStyle();
             break;
         }
     }

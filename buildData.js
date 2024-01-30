@@ -35,6 +35,7 @@ fileNames.forEach(fileName => {
         const dirSepIndex = fileName.lastIndexOf("\\");
         const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
         note.id = shortFileName.replace(/\.md/g, '');
+        note.lang = note.lang || "en";
         const existingNote = notes.find(n => (n.quid === note.id));
         if (!existingNote) {
             notes.push(note);
