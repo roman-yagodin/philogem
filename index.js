@@ -14,9 +14,10 @@ const baseTheme = {
     foreground: '#F8F8F8',
     background: '#2D2E2C',
     selection: '#5DA5D533',
-    //black: '#1E1E1D', 
-    black: '#FFA500', // reuse black for orange (1)
-    brightBlack: '#262625',
+    // black: '#1E1E1D', 
+    // brightBlack: '#262625',
+    black: '#CE8500', // reuse black for orange (1)
+    brightBlack: '#FFA500',
     red: '#CE5C5C',
     brightRed: '#FF7272',
     green: '#5BCC5B',
@@ -253,7 +254,7 @@ async function menu(options, showOptions = true) {
     if (showOptions) {
         setStyle(styles.magenta);
         for (let i = 0; i < options.length; i++) {
-            if (i === 0) {
+            if (i > 0) {
                 await typeln(`${i}. ${options[i].text}`);
                 await wait(_hs);
             }
@@ -495,8 +496,8 @@ async function typeNote(note, noteColor) {
     setStyle(styles.bold + styles[noteColor]);
     for (let i = 0; i < noteLines.length; i++) {
         const line = noteLines[i];
-        // TODO: Add leading \t for desktop 
-        await typeln("▉ " + line);
+        // TODO: Add leading \t for desktop?
+        await typeln("▌ " + line);
         await wait(_hs);
     }
     resetStyle();
@@ -523,9 +524,12 @@ async function scene4_world(note) {
             { text: "", choice: "showMenu" },
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
+            { text: "Follow language.", choice: "followLanguage" },
+            // TODO: Utilities, move to submenu or review mode?
             { text: "Copy the note.", choice: "copy" },
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint.", choice: "hint" },
+            // TODO: Increment action counter, say "Come back soon"
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
@@ -544,14 +548,11 @@ async function scene4_world(note) {
 
         if (choice === "followAuthor") {
             const nextNote = game.notes.find(n => {
-                // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
             });
-
-            console.log({note: note, nextNote: nextNote});
 
             if (nextNote) {
                 note = nextNote;
@@ -569,14 +570,32 @@ async function scene4_world(note) {
 
         if (choice === "followColor") {
             const nextNote = game.notes.find(n => {
-                // TODO: Check not only current note, but also breadcrumbs
                 if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)) {
                     return true;
                 }
                 return false;
             });
 
-            console.log({note: note, nextNote: nextNote});
+            if (nextNote) {
+                note = nextNote;
+                game.state.breadCrumbs.push(note.id);
+                game.saveState();
+            }
+            else {
+                await reachedEOW();
+                noteColor = randomNoteColor(note);
+            }
+            showNote = true;
+            showMenu = true;
+        }
+
+        if (choice === "followLanguage") {
+            const nextNote = game.notes.find(n => {
+                if (n.meta.lang === note.meta.lang && !game.state.breadCrumbs.includes(n.id)) {
+                    return true;
+                }
+                return false;
+            });
 
             if (nextNote) {
                 note = nextNote;
@@ -591,7 +610,6 @@ async function scene4_world(note) {
             showMenu = true;
         }
         
-        // TODO: Move to review mode
         if (choice === "copy") {
             const wasCopied = await copyToClipboard(note.original);
             await typeln();
@@ -614,8 +632,8 @@ async function scene4_world(note) {
                 await typeln();
                 for (let i = 0; i < hintLines.length; i++) {
                     const line = hintLines[i];
-                    // TODO: Add leading \t for desktop 
-                    await typeln(line);
+                    // TODO: Add leading \t for desktop?
+                    await typeln("▌ " + line);
                     await wait(_hs);
                 }
                 await typeln();
