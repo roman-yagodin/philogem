@@ -112,8 +112,8 @@ class Game {
         return this.state.actionCounter;
     }
 
-    decrementActionCounter() {
-        this.state.actionCounter--;
+    decrementActionCounter(n = 1) {
+        this.state.actionCounter -= n;
         if (this.state.actionCounter < 0) {
             this.state.actionCounter = 0;
         }
@@ -125,6 +125,12 @@ class Game {
         return this.state.actionCounter;
     }
 
+    incrementActionCounter(n) {
+        this.state.actionCounter += n;
+        this.resetReturnAfter();
+        return this.state.actionCounter;
+    }
+
     setReturnAfter() {
         const nowDate = new Date();
         const returnAfterDate = new Date();
@@ -133,6 +139,10 @@ class Game {
         this.state.returnAfter = returnAfterDate;
 
         console.log({ nowDate: nowDate, returnAfterDate: returnAfterDate });
+    }
+
+    resetReturnAfter() {
+        this.state.returnAfter = null;
     }
 
     checkReturnAfter() {
@@ -162,6 +172,7 @@ class Game {
 
 function init() {
     const t = new Terminal({
+        // TODO: Review font list
         fontFamily: '"Cascadia Code", Menlo, monospace',
         theme: baseTheme,
         cursorBlink: true
@@ -249,7 +260,7 @@ async function wait(delay) {
 
 async function menu(options, showOptions = true) {
     // TODO: Randomize options order/numbering
-    // TODO: Randomly exclude certain options
+    // TODO: Randomly exclude excludable options
 
     if (showOptions) {
         setStyle(styles.magenta);
@@ -284,12 +295,12 @@ async function waitKey() {
     });
 }
 
-async function readKey(echo = true) {
+async function readKey(prompt = "?? ", echo = true) {
     while (true) {
 
         // prompt
-        setStyle(styles.magenta);
-        await type("?? ");
+        setStyle(styles.faint + styles.magenta);
+        await type(prompt);
         resetStyle();
 
         // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
@@ -297,18 +308,17 @@ async function readKey(echo = true) {
 
         if (echo) {
             setStyle(styles.bold + styles.magenta);
-            await typeln("\b\b\b<< " + key.key);
+            await typeln("\b".repeat(prompt.length) + "<< " + key.key);
             resetStyle();
         }
         else {
-            await type("\b\b\b");
+            await type("\b".repeat(prompt.length));
         }
 
         return key.key;
     }
 }
 
-// TODO: Need a way to go to any progress point for debug
 async function main() {
     await scene1_door();
     await typeln();
@@ -404,9 +414,16 @@ async function scene2_greeting() {
 
     setStyle(styles.bold + styles.red);
     await typeln();
-    await type("Imagining the world... ");
+
+    if (game.isNewGame()) {
+        await type(`${randomMsg(["Imagining", "Creating"])} the world... `);
+    }
+    else {
+        await type(`${randomMsg(["Re-imagining", "Re-creating"])} the world... `);
+    }
+    
     await wait(_4s);
-    await typeln("Done.");
+    await typeln(randomMsg(["Done.", "Done.", "Done.", "Clap!", "Slap!", "Plop!", "Boom!"]));
     await wait(_2s);
 
     // to the world
@@ -441,6 +458,7 @@ async function command(command) {
         t.clear();
     }
 
+    await wait(_1s);
     return true;
 }
 
@@ -513,11 +531,12 @@ async function scene4_world(note) {
     while(true) {
 
         if (showNote) {
+            await typeln();
             await command("CLS");
             await typeNote(note, noteColor);
             showNote = false;
 
-            await readKey(false);
+            await readKey("...", false);
         }
 
         const choice = await menu([
@@ -525,11 +544,11 @@ async function scene4_world(note) {
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
-            // TODO: Utilities, move to submenu or review mode?
+            // TODO: Move utilities to submenu or review mode?
             { text: "Copy the note.", choice: "copy" },
+            // TODO: Combine with hint
             { text: "Reveal the author.", choice: "author" },
             { text: "Show hint.", choice: "hint" },
-            // TODO: Increment action counter, say "Come back soon"
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
@@ -543,6 +562,7 @@ async function scene4_world(note) {
         }
 
         if (choice === "showMenu") {
+            await typeln();
             showMenu = true;
         }
 
@@ -619,7 +639,7 @@ async function scene4_world(note) {
         
         if (choice === "author") {
             await typeln();
-            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}`);
+            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
             await typeln();
         }
         
@@ -647,6 +667,13 @@ async function scene4_world(note) {
         }
         
         if (choice === "leave") {
+            game.incrementActionCounter(randomInt(5, 10));
+            game.saveState();
+            setStyle(styles.bold + styles.green);
+            await typeln();
+            await typeln(`> Goodbye, ${styles.cyan}${game.state.playerName}${styles.green}! And come back soon.`);
+            await typeln();
+            resetStyle();
             break;
         }
     }
