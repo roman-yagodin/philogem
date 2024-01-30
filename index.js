@@ -1,4 +1,4 @@
-const DEBUG = true; // set to false before publish!
+const DEBUG = false; // set to false before publish!
 
 const EOL = "\n\r";
 const _1t = 10; // type interval
