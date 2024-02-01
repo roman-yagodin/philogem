@@ -209,7 +209,7 @@ function init() {
         }
     });
     t.open(document.getElementById('terminal'));
-    t.focus();
+    //t.focus();
 }
 
 function setStyle(style) {
@@ -306,13 +306,14 @@ async function menu(options, showOptions = true) {
 }
 
 async function waitKey() {
-    window.game.lastKey = null;
+    t.focus();
+    game.lastKey = null;
     return new Promise((resolve) => {
         const interval = setInterval(() => {
-            if (window.game.lastKey) {
+            if (game.lastKey) {
                 clearInterval(interval);
-                console.log({key: window.game.lastKey});
-                resolve(window.game.lastKey);
+                console.log({key: game.lastKey});
+                resolve(game.lastKey);
             }
         }, 100)
     });
