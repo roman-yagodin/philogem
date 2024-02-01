@@ -401,11 +401,17 @@ async function puzzle1() {
     ]);
     
     if (choice === "everything") {
-        if (randomYes(0.33)) {
+        if (randomYes(0.1)) {
             choice = thing;
         }
         else {
             choice = "nothing";
+        }
+    }
+    
+    if (choice === "something" || choice === "anything") {
+        if (choice !== thing && randomYes(0.5)) {
+            choice = thing;
         }
     }
 
@@ -413,7 +419,7 @@ async function puzzle1() {
         await typeln();
         await typeln("You reach out your hand to the door handle,");
         await wait(_1s);
-        await typeln("but the moment before you touch it, the door opens!");
+        await typeln("  but the moment before you touch it, the door opens!");
         return true;
     }
     else {
@@ -452,7 +458,6 @@ async function scene2_greeting() {
     // greeting
     const hello = game.isNewGame() ? "Hello" : "Welcome back"
     setStyle(styles.bold + styles.green);
-    await typeln();
     await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}!${styles.green}`);
     await typeln("> Take your time and have fun!");
     resetStyle();
@@ -463,15 +468,18 @@ async function scene2_greeting() {
     await typeln();
 
     if (game.isNewGame()) {
-        await type(`${randomMsg(["Imagining", "Creating"])} the world... `);
+        await type(`${randomMsg(["Imagining", "Creating", "Forging"])} the world... `);
     }
     else {
-        await type(`${randomMsg(["Re-imagining", "Re-creating"])} the world... `);
+        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Transforming"])} the world... `);
     }
     
     await wait(_4s);
-    await typeln(randomMsg(["Done.", "Done.", "Done.", "Clap!", "Slap!", "Plop!", "Boom!"]));
-    await wait(_2s);
+    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!"]));
+    await wait(_4s);
+
+    await typeln();
+    await readKey("...", false);
 
     // to the world
     if (game.isNewGame()) {
