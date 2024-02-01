@@ -320,7 +320,7 @@ async function readKey(prompt = "?? ", echo = true) {
 }
 
 async function main() {
-    await scene1_door();
+    await scene1_puzzlebox();
     await typeln();
     await typeln("Game over.");
 }
@@ -347,44 +347,53 @@ function randomYes(prob) {
     return prob >= Math.random();
 }
 
-async function scene1_door() {
+async function puzzle1() {
     await typeln("You stand before pretty much arbitrary door.");
-    await wait(_hs);
-    await typeln("Do you feel anything?");
+    await wait(_1s);
+
+    const thing = randomMsg(["anything", "something"]);
+    await typeln(`Do you feel ${thing}?`);
+    await wait(_4s);
+
     await typeln();
-
-    await wait(_5s);
-
     let choice = await menu([
         { text: "", choice: "nothing" },
-        { text: "I feel *something*!", choice: "thing" },
+        { text: "I feel *something*!", choice: "something" },
         { text: "I don't feel anything...", choice: "nothing" },
-        { text: "I do _feel_ anything.", choice: "thing" },
+        { text: "I do _feel_ anything.", choice: "anything" },
         { text: "I feel EVERYTHING!..", choice: "everything" }
     ]);
     
     if (choice === "everything") {
-        if (randomYes(0.5)) {
-            choice = "thing";
-            setStyle(styles.bold + styles.red);
-            await typeln("Well, let's believe you -- *this* time...");
-            resetStyle();
+        if (randomYes(0.33)) {
+            choice = thing;
         }
         else {
             choice = "nothing";
         }
     }
 
-    if (choice === "thing") {
-        return await scene2_greeting();
+    if (choice === thing) {
+        await typeln();
+        await typeln("You reach out your hand to the door handle,");
+        await wait(_1s);
+        await typeln("but the moment before you touch it, the door opens!");
+        return true;
     }
     else {
         await typeln();
-        await typeln("No matter how you try, the door remains shut.");
+        await typeln("You walked away.");
         return false;
     }
+}
 
-    return true;
+async function scene1_puzzlebox() {
+    // TODO: Select random puzzle
+    const pass = await puzzle1();
+    if (pass) {
+        return await scene2_greeting();
+    }
+    return false;
 }
 
 async function scene2_greeting() {
