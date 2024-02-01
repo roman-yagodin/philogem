@@ -1,5 +1,16 @@
+body {
+    margin: 4px; /* same as focus outline width */
+}
+
 .terminal-box {
     padding: 1rem;
+}
+
+.terminal-box.theme-bow {
+    background-color: #FFFFFF;
+}
+
+.terminal-box.theme-color {
     background-color: #2D2E2C;
 }
 

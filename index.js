@@ -10,7 +10,7 @@ const _3s = _1s * 3;
 const _4s = _1s * 4;
 const _5s = _1s * 5;
 
-const baseTheme = {
+const colorTheme = {
     foreground: '#F8F8F8',
     background: '#2D2E2C',
     selection: '#5DA5D533',
@@ -32,6 +32,29 @@ const baseTheme = {
     brightCyan: '#72F0FF',
     white: '#F8F8F8',
     brightWhite: '#FFFFFF'
+};
+
+const bowTheme = {
+    foreground: '#111111',
+    background: '#FFFFFF',
+    selection: '#CCCCCC',
+    black: '#222222', 
+    brightBlack: '#333333',
+    red: '#222222',
+    brightRed: '#333333',
+    green: '#222222',
+    brightGreen: '#333333',
+    yellow: '#222222',
+    brightYellow: '#333333',
+    blue: '#222222',
+    brightBlue: '#333333',
+    magenta: '#222222',
+    brightMagenta: '#333333',
+    cyan: '#222222',
+    brightCyan: '#333333',
+    white: '#DDDDDD',
+    brightWhite: '#EEEEEE',
+    cursor: '#111111'
 };
 
 const styles = {
@@ -174,7 +197,7 @@ function init() {
     const t = new Terminal({
         // TODO: Review font list
         fontFamily: '"Cascadia Code", Menlo, monospace',
-        theme: baseTheme,
+        theme: bowTheme,
         cursorBlink: true
     });
     window.t = t;
@@ -319,9 +342,21 @@ async function readKey(prompt = "?? ", echo = true) {
     }
 }
 
+function setTheme(theme) {
+    t.options.theme = theme;
+    if (theme.background === bowTheme.background) {
+        $(".terminal-box").removeClass("theme-color").addClass("theme-bow");
+    }
+    else {
+        $(".terminal-box").removeClass("theme-bow").addClass("theme-color");
+    }
+}
+
 async function main() {
     await scene1_puzzlebox();
-    await typeln();
+
+    await command("CLS");
+    setTheme(bowTheme);
     await typeln("Game over.");
 }
 
@@ -391,6 +426,8 @@ async function scene1_puzzlebox() {
     // TODO: Select random puzzle
     const pass = await puzzle1();
     if (pass) {
+        setTheme(colorTheme);
+        await command("CLS");
         return await scene2_greeting();
     }
     return false;
