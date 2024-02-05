@@ -200,6 +200,7 @@ function init() {
         theme: bowTheme,
         cursorBlink: true
     });
+
     window.t = t;
     window.game = new Game();
     t.attachCustomKeyEventHandler(e => {
@@ -208,8 +209,11 @@ function init() {
             window.game.lastKey = e;
         }
     });
+
+    const fitAddon = new FitAddon.FitAddon();
+    t.loadAddon(fitAddon);
     t.open(document.getElementById('terminal'));
-    //t.focus();
+    fitAddon.fit();
 }
 
 function setStyle(style) {

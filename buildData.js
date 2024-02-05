@@ -31,11 +31,14 @@ const notes = [];
 fileNames.forEach(fileName => {
     if (fileName.endsWith(".md")) {
         const content = fs.readFileSync(`./data/${fileName}`, 'utf8');
-        const note = parseNote(content);
         const dirSepIndex = fileName.lastIndexOf("\\");
         const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
+        const note = parseNote(content);
         note.id = shortFileName.replace(/\.md/g, '');
         note.lang = note.lang || "en";
+        if (!note.meta.colors || !note.meta.author) {
+            console.error(`Error parsing frontmatter: ${note.id}.`);
+        }
         const existingNote = notes.find(n => (n.quid === note.id));
         if (!existingNote) {
             notes.push(note);
