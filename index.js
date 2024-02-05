@@ -10,7 +10,7 @@ const _3s = _1s * 3;
 const _4s = _1s * 4;
 const _5s = _1s * 5;
 
-const baseTheme = {
+const colorTheme = {
     foreground: '#F8F8F8',
     background: '#2D2E2C',
     selection: '#5DA5D533',
@@ -32,6 +32,29 @@ const baseTheme = {
     brightCyan: '#72F0FF',
     white: '#F8F8F8',
     brightWhite: '#FFFFFF'
+};
+
+const bowTheme = {
+    foreground: '#111111',
+    background: '#FFFFFF',
+    selection: '#CCCCCC',
+    black: '#222222', 
+    brightBlack: '#333333',
+    red: '#222222',
+    brightRed: '#333333',
+    green: '#222222',
+    brightGreen: '#333333',
+    yellow: '#222222',
+    brightYellow: '#333333',
+    blue: '#222222',
+    brightBlue: '#333333',
+    magenta: '#222222',
+    brightMagenta: '#333333',
+    cyan: '#222222',
+    brightCyan: '#333333',
+    white: '#DDDDDD',
+    brightWhite: '#EEEEEE',
+    cursor: '#111111'
 };
 
 const styles = {
@@ -174,9 +197,10 @@ function init() {
     const t = new Terminal({
         // TODO: Review font list
         fontFamily: '"Cascadia Code", Menlo, monospace',
-        theme: baseTheme,
+        theme: bowTheme,
         cursorBlink: true
     });
+
     window.t = t;
     window.game = new Game();
     t.attachCustomKeyEventHandler(e => {
@@ -185,8 +209,11 @@ function init() {
             window.game.lastKey = e;
         }
     });
+
+    const fitAddon = new FitAddon.FitAddon();
+    t.loadAddon(fitAddon);
     t.open(document.getElementById('terminal'));
-    t.focus();
+    fitAddon.fit();
 }
 
 function setStyle(style) {
@@ -283,13 +310,14 @@ async function menu(options, showOptions = true) {
 }
 
 async function waitKey() {
-    window.game.lastKey = null;
+    t.focus();
+    game.lastKey = null;
     return new Promise((resolve) => {
         const interval = setInterval(() => {
-            if (window.game.lastKey) {
+            if (game.lastKey) {
                 clearInterval(interval);
-                console.log({key: window.game.lastKey});
-                resolve(window.game.lastKey);
+                console.log({key: game.lastKey});
+                resolve(game.lastKey);
             }
         }, 100)
     });
@@ -319,9 +347,21 @@ async function readKey(prompt = "?? ", echo = true) {
     }
 }
 
+function setTheme(theme) {
+    t.options.theme = theme;
+    if (theme.background === bowTheme.background) {
+        $(".terminal-box").removeClass("theme-color").addClass("theme-bow");
+    }
+    else {
+        $(".terminal-box").removeClass("theme-bow").addClass("theme-color");
+    }
+}
+
 async function main() {
-    await scene1_door();
-    await typeln();
+    await scene1_puzzlebox();
+
+    await command("CLS");
+    setTheme(bowTheme);
     await typeln("Game over.");
 }
 
@@ -347,44 +387,61 @@ function randomYes(prob) {
     return prob >= Math.random();
 }
 
-async function scene1_door() {
+async function puzzle1() {
     await typeln("You stand before pretty much arbitrary door.");
-    await wait(_hs);
-    await typeln("Do you feel anything?");
+    await wait(_1s);
+
+    const thing = randomMsg(["anything", "something"]);
+    await typeln(`Do you feel ${thing}?`);
+    await wait(_4s);
+
     await typeln();
-
-    await wait(_5s);
-
     let choice = await menu([
         { text: "", choice: "nothing" },
-        { text: "I feel *something*!", choice: "thing" },
+        { text: "I feel *something*!", choice: "something" },
         { text: "I don't feel anything...", choice: "nothing" },
-        { text: "I do _feel_ anything.", choice: "thing" },
+        { text: "I do _feel_ anything.", choice: "anything" },
         { text: "I feel EVERYTHING!..", choice: "everything" }
     ]);
     
     if (choice === "everything") {
-        if (randomYes(0.5)) {
-            choice = "thing";
-            setStyle(styles.bold + styles.red);
-            await typeln("Well, let's believe you -- *this* time...");
-            resetStyle();
+        if (randomYes(0.1)) {
+            choice = thing;
         }
         else {
             choice = "nothing";
         }
     }
+    
+    if (choice === "something" || choice === "anything") {
+        if (choice !== thing && randomYes(0.5)) {
+            choice = thing;
+        }
+    }
 
-    if (choice === "thing") {
-        return await scene2_greeting();
+    if (choice === thing) {
+        await typeln();
+        await typeln("You reach out your hand to the door handle,");
+        await wait(_1s);
+        await typeln("  but the moment before you touch it, the door opens!");
+        return true;
     }
     else {
         await typeln();
-        await typeln("No matter how you try, the door remains shut.");
+        await typeln("You walked away.");
         return false;
     }
+}
 
-    return true;
+async function scene1_puzzlebox() {
+    // TODO: Select random puzzle
+    const pass = await puzzle1();
+    if (pass) {
+        setTheme(colorTheme);
+        await command("CLS");
+        return await scene2_greeting();
+    }
+    return false;
 }
 
 async function scene2_greeting() {
@@ -405,7 +462,6 @@ async function scene2_greeting() {
     // greeting
     const hello = game.isNewGame() ? "Hello" : "Welcome back"
     setStyle(styles.bold + styles.green);
-    await typeln();
     await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}!${styles.green}`);
     await typeln("> Take your time and have fun!");
     resetStyle();
@@ -416,15 +472,18 @@ async function scene2_greeting() {
     await typeln();
 
     if (game.isNewGame()) {
-        await type(`${randomMsg(["Imagining", "Creating"])} the world... `);
+        await type(`${randomMsg(["Imagining", "Creating", "Forging"])} the world... `);
     }
     else {
-        await type(`${randomMsg(["Re-imagining", "Re-creating"])} the world... `);
+        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Transforming"])} the world... `);
     }
     
     await wait(_4s);
-    await typeln(randomMsg(["Done.", "Done.", "Done.", "Clap!", "Slap!", "Plop!", "Boom!"]));
-    await wait(_2s);
+    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!"]));
+    await wait(_4s);
+
+    await typeln();
+    await readKey("...", false);
 
     // to the world
     if (game.isNewGame()) {
