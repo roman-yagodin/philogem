@@ -4,12 +4,13 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 
 function parseNote(md) {
-    const fmIndex = md.indexOf("---");
-    if (fmIndex >= 0) {
-        const fmText = md.substring(0, fmIndex);
+    const fmStartIndex = md.indexOf("---");
+    const fmEndIndex = md.indexOf("---", fmStartIndex + 3);
+    if (fmStartIndex >= 0 && fmEndIndex > fmStartIndex) {
+        const fmText = md.substring(fmStartIndex + 3, fmEndIndex);
         const meta = yaml.load(fmText);
         return {
-            text: md.substring(fmIndex + 3),
+            text: md.substring(fmEndIndex + 3),
             original: md,
             meta: meta
         };
