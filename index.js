@@ -203,6 +203,12 @@ function init() {
 
     window.t = t;
     window.game = new Game();
+
+    const fitAddon = new FitAddon.FitAddon();
+    t.loadAddon(fitAddon);
+    t.open(document.getElementById('terminal'));
+    fitAddon.fit();
+
     t.attachCustomKeyEventHandler(e => {
         //console.log(e);
         if (e.type === "keyup") {
@@ -210,10 +216,9 @@ function init() {
         }
     });
 
-    const fitAddon = new FitAddon.FitAddon();
-    t.loadAddon(fitAddon);
-    t.open(document.getElementById('terminal'));
-    fitAddon.fit();
+    window.addEventListener("resize", (e) => {
+        fitAddon.fit();
+    });
 }
 
 function setStyle(style) {
