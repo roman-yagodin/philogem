@@ -50,5 +50,5 @@ fileNames.forEach(fileName => {
     }
 });
 
-const data = "const notes = " + JSON.stringify(notes) + ";";
+const data = "export const notes = " + JSON.stringify(notes) + ";";
 fs.writeFileSync('./js/data.js', data);
