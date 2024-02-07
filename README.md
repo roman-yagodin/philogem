@@ -4,7 +4,7 @@
 
 ## What's this all about?
 
-It's up to you to discover!
+It's up to *you* to [discover](https://roman-yagodin.github.io/tgl/)!
 
 ## Licenses
 
