@@ -1,4 +1,5 @@
-const DEBUG = false; // set to false before publish!
+import { notes } from "./data.js";
+import { DEBUG } from "./debug.js";
 
 const EOL = "\n\r";
 const _1t = 10; // type interval
@@ -193,29 +194,6 @@ class Game {
     }
 }
 
-function init() {
-    const t = new Terminal({
-        // TODO: Review font list
-        fontFamily: '"Cascadia Code", Menlo, monospace',
-        theme: bowTheme,
-        cursorBlink: true
-    });
-
-    window.t = t;
-    window.game = new Game();
-    t.attachCustomKeyEventHandler(e => {
-        //console.log(e);
-        if (e.type === "keyup") {
-            window.game.lastKey = e;
-        }
-    });
-
-    const fitAddon = new FitAddon.FitAddon();
-    t.loadAddon(fitAddon);
-    t.open(document.getElementById('terminal'));
-    fitAddon.fit();
-}
-
 function setStyle(style) {
     t.write(style);
 }
@@ -355,14 +333,6 @@ function setTheme(theme) {
     else {
         $(".terminal-box").removeClass("theme-bow").addClass("theme-color");
     }
-}
-
-async function main() {
-    await scene1_puzzlebox();
-
-    await command("CLS");
-    setTheme(bowTheme);
-    await typeln("Game over.");
 }
 
 function randomInt(from, to) {
@@ -740,8 +710,45 @@ async function scene4_world(note) {
     return false;
 }
 
-$(() => {
-    init();
-    main();
-});
+export class App {
+    init() {
+        const t = new Terminal({
+            // TODO: Review font list
+            fontFamily: '"Cascadia Code", Menlo, monospace',
+            theme: bowTheme,
+            cursorBlink: true
+        });
 
+        window.t = t;
+        window.game = new Game();
+
+        const fitAddon = new FitAddon.FitAddon();
+        t.loadAddon(fitAddon);
+        t.open(document.getElementById('terminal'));
+        fitAddon.fit();
+
+        t.attachCustomKeyEventHandler(e => {
+            //console.log(e);
+            if (e.type === "keyup") {
+                window.game.lastKey = e;
+            }
+        });
+
+        window.addEventListener("resize", (e) => {
+            fitAddon.fit();
+        });
+    }
+
+    async main() {
+        await scene1_puzzlebox();
+        await command("CLS");
+        setTheme(bowTheme);
+        await typeln("Game over.");
+    }
+}
+
+$(() => {
+    const app = new App();
+    app.init();
+    app.main();
+});
