@@ -19,7 +19,8 @@ export const colorTheme = {
     cyan: '#5DA5D5',
     brightCyan: '#72F0FF',
     white: '#F8F8F8',
-    brightWhite: '#FFFFFF'
+    brightWhite: '#FFFFFF',
+    cursor: '#72FF72'
 };
 
 export const bowTheme = {
@@ -42,5 +43,5 @@ export const bowTheme = {
     brightCyan: '#333333',
     white: '#DDDDDD',
     brightWhite: '#EEEEEE',
-    cursor: '#111111'
+    cursor: '#72FF72'
 };

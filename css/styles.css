@@ -8,11 +8,11 @@ body {
     box-sizing: border-box;
 }
 
-.terminal-box.theme-bow {
+.theme-bow {
     background-color: #FFFFFF;
 }
 
-.terminal-box.theme-color {
+.theme-color {
     background-color: #2D2E2C;
 }
 

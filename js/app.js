@@ -263,10 +263,10 @@ async function readKey(prompt = "?? ", echo = true) {
 function setTheme(theme) {
     t.options.theme = theme;
     if (theme.background === bowTheme.background) {
-        $(".terminal-box").removeClass("theme-color").addClass("theme-bow");
+        $("body").removeClass("theme-color").addClass("theme-bow");
     }
     else {
-        $(".terminal-box").removeClass("theme-bow").addClass("theme-color");
+        $("body").removeClass("theme-bow").addClass("theme-color");
     }
 }
 
@@ -294,6 +294,7 @@ function randomYes(prob) {
 
 async function puzzle1() {
     await typeln("You stand before pretty much arbitrary door.");
+    await typeln();
     await wait(_1s);
 
     const thing = randomMsg(["anything", "something"]);
@@ -651,7 +652,8 @@ export class App {
             // TODO: Review font list
             fontFamily: '"Cascadia Code", Menlo, monospace',
             theme: bowTheme,
-            cursorBlink: true
+            cursorBlink: true,
+            rows: 35
         });
 
         window.t = t;
