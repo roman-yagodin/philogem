@@ -110,3 +110,39 @@ async function scene3_hub(authors) {
 
     return false;
 }
+
+//---
+
+async function typeln(s) {
+    if (s) {
+        await type(s);
+    }
+    return await _type(EOL);
+}
+
+async function type(s) {
+    let x = 0;
+    const words = s.split(/\s+/);
+
+    // FitAddon doesn't update cols? Recalc it on resize?
+    console.log({ words: words, cols: t.options.cols, t: t });
+
+    for (let word of words) {
+        const w = word.trim();
+        if (w.length > 0) {
+            x += w.length + 1;
+            if (x < t.options.cols) {
+                await _type(w + " ");
+            }
+            else {
+                x = w.length + 1;
+                await _type(EOL + w + " ");
+            }
+        }
+    }
+}
+    
+async function _type(s) {
+}
+
+//---

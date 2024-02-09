@@ -4,8 +4,11 @@ import { colorTheme, bowTheme } from "./themes.js";
 import { DEBUG } from "./debug.js";
 
 const EOL = "\n\r";
-const _1t = 10; // type interval
 
+// type interval
+const _1t = 10;
+
+// wait intervals
 const _1s = 1000;
 const _hs = _1s / 2;
 const _2s = _1s * 2;
@@ -137,16 +140,16 @@ function resetStyle() {
     t.write(styles.default);
 }
 
-async function typeln(s) {
+async function typeln(s, typeDelay) {
     if (s) {
-        return type(s + EOL);
+        return type(s + EOL, typeDelay);
     }
     else {
-        return type(EOL);
+        return type(EOL, typeDelay);
     }
 }
     
-async function type(s) {
+async function type(s, typeDelay = _1t) {
     
     s = s.replace("\\b", "\b");
 
@@ -157,6 +160,14 @@ async function type(s) {
     // italics
     s = s.replace(/\_([^\s\.,;:!\?-])/g, styles.italics + "$1");
     s = s.replace(/\_([\s\.,;:!\?-])/g, styles.nonItalics + "$1");
+
+    if (typeDelay === 0) {
+        return new Promise((resolve) => {
+            t.write(s, () => {
+                resolve("done");
+            });
+        });
+    }
 
     return new Promise((resolve) => {
         let i = 0;
@@ -183,7 +194,7 @@ async function type(s) {
                     }
                 });
             }
-        }, _1t);
+        }, typeDelay);
     });
 }
 
@@ -206,7 +217,7 @@ async function menu(options, showOptions = true) {
         setStyle(styles.magenta);
         for (let i = 0; i < options.length; i++) {
             if (i > 0) {
-                await typeln(`${i}. ${options[i].text}`);
+                await typeln(`${i}. ${options[i].text}`, 0);
                 await wait(_hs);
             }
         }
@@ -479,8 +490,7 @@ async function typeNote(note, noteColor) {
     setStyle(styles.bold + styles[noteColor]);
     for (let i = 0; i < noteLines.length; i++) {
         const line = noteLines[i];
-        // TODO: Add leading \t for desktop?
-        await typeln("▌ " + line);
+        await typeln(line);
         await wait(_hs);
     }
     resetStyle();
