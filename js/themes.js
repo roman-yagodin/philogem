@@ -2,10 +2,10 @@ export const colorTheme = {
     foreground: '#F8F8F8',
     background: '#2D2E2C',
     selection: '#5DA5D533',
-    // black: '#1E1E1D', 
+    // black: '#1E1E1D',
     // brightBlack: '#262625',
     black: '#CE8500', // reuse black for orange (1)
-    brightBlack: '#FFA500',
+brightBlack: '#FFA500',
     red: '#CE5C5C',
     brightRed: '#FF7272',
     green: '#5BCC5B',
@@ -18,8 +18,8 @@ export const colorTheme = {
     brightMagenta: '#E572FF',
     cyan: '#5DA5D5',
     brightCyan: '#72F0FF',
-    white: '#F8F8F8',
-    brightWhite: '#FFFFFF',
+    white: '#999999',
+    brightWhite: '#CCCCCC',
     cursor: '#72FF72'
 };
 
@@ -41,7 +41,7 @@ export const bowTheme = {
     brightMagenta: '#333333',
     cyan: '#222222',
     brightCyan: '#333333',
-    white: '#DDDDDD',
-    brightWhite: '#EEEEEE',
+    white: '#999999',
+    brightWhite: '#777777',
     cursor: '#72FF72'
 };

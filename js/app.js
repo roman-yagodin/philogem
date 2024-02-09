@@ -23,7 +23,8 @@ const styles = {
     italics: "\x1b[3m",
     nonBold: "\x1b[22m", // neither bold nor faint
     nonItalics: "\x1b[23m",
-    orange: "\x1b[30m", // reuse black for orange (2)
+    black: "\x1b[30m",
+    orange: "\x1b[30m", // reuse black for orange
     red: "\x1b[31m",
     green: "\x1b[32m",
     yellow: "\x1b[33m",
@@ -214,7 +215,7 @@ async function menu(options, showOptions = true) {
     // TODO: Randomly exclude excludable options
 
     if (showOptions) {
-        setStyle(styles.magenta);
+        setStyle(styles.white);
         for (let i = 0; i < options.length; i++) {
             if (i > 0) {
                 await typeln(`${i}. ${options[i].text}`, 0);
@@ -251,7 +252,7 @@ async function readKey(prompt = "?? ", echo = true) {
     while (true) {
 
         // prompt
-        setStyle(styles.faint + styles.magenta);
+        setStyle(styles.faint + styles.white);
         await type(prompt);
         resetStyle();
 
@@ -259,7 +260,7 @@ async function readKey(prompt = "?? ", echo = true) {
         const key = await waitKey();
 
         if (echo) {
-            setStyle(styles.bold + styles.magenta);
+            setStyle(styles.bold + styles.white);
             await typeln("\b".repeat(prompt.length) + "<< " + key.key);
             resetStyle();
         }
@@ -340,12 +341,14 @@ async function puzzle1() {
         await typeln();
         await typeln("You reach out your hand to the door handle,");
         await wait(_1s);
-        await typeln("  but the moment before you touch it, the door opens!");
+        await typeln("but the moment before you touch it, the door opens!");
+        await wait(_4s);
         return true;
     }
     else {
         await typeln();
-        await typeln("You walked away.");
+        await typeln("You were just passed by...");
+        await wait(_4s);
         return false;
     }
 }
@@ -392,14 +395,13 @@ async function scene2_greeting() {
         await type(`${randomMsg(["Imagining", "Creating", "Forging"])} the world... `);
     }
     else {
-        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Transforming"])} the world... `);
+        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Terraforming", "Transforming", "Polishing"])} the world... `);
     }
     
     await wait(_4s);
-    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!"]));
-    await wait(_4s);
-
+    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!", "Ding!"]));
     await typeln();
+
     await readKey("...", false);
 
     // to the world
