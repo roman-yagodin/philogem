@@ -4,8 +4,11 @@ import { colorTheme, bowTheme } from "./themes.js";
 import { DEBUG } from "./debug.js";
 
 const EOL = "\n\r";
-const _1t = 10; // type interval
 
+// type interval
+const _1t = 10;
+
+// wait intervals
 const _1s = 1000;
 const _hs = _1s / 2;
 const _2s = _1s * 2;
@@ -20,7 +23,8 @@ const styles = {
     italics: "\x1b[3m",
     nonBold: "\x1b[22m", // neither bold nor faint
     nonItalics: "\x1b[23m",
-    orange: "\x1b[30m", // reuse black for orange (2)
+    black: "\x1b[30m",
+    orange: "\x1b[30m", // reuse black for orange
     red: "\x1b[31m",
     green: "\x1b[32m",
     yellow: "\x1b[33m",
@@ -137,16 +141,16 @@ function resetStyle() {
     t.write(styles.default);
 }
 
-async function typeln(s) {
+async function typeln(s, typeDelay) {
     if (s) {
-        return type(s + EOL);
+        return type(s + EOL, typeDelay);
     }
     else {
-        return type(EOL);
+        return type(EOL, typeDelay);
     }
 }
     
-async function type(s) {
+async function type(s, typeDelay = _1t) {
     
     s = s.replace("\\b", "\b");
 
@@ -157,6 +161,14 @@ async function type(s) {
     // italics
     s = s.replace(/\_([^\s\.,;:!\?-])/g, styles.italics + "$1");
     s = s.replace(/\_([\s\.,;:!\?-])/g, styles.nonItalics + "$1");
+
+    if (typeDelay === 0) {
+        return new Promise((resolve) => {
+            t.write(s, () => {
+                resolve("done");
+            });
+        });
+    }
 
     return new Promise((resolve) => {
         let i = 0;
@@ -183,7 +195,7 @@ async function type(s) {
                     }
                 });
             }
-        }, _1t);
+        }, typeDelay);
     });
 }
 
@@ -203,10 +215,10 @@ async function menu(options, showOptions = true) {
     // TODO: Randomly exclude excludable options
 
     if (showOptions) {
-        setStyle(styles.magenta);
+        setStyle(styles.white);
         for (let i = 0; i < options.length; i++) {
             if (i > 0) {
-                await typeln(`${i}. ${options[i].text}`);
+                await typeln(`${i}. ${options[i].text}`, 0);
                 await wait(_hs);
             }
         }
@@ -240,7 +252,7 @@ async function readKey(prompt = "?? ", echo = true) {
     while (true) {
 
         // prompt
-        setStyle(styles.faint + styles.magenta);
+        setStyle(styles.faint + styles.white);
         await type(prompt);
         resetStyle();
 
@@ -248,7 +260,7 @@ async function readKey(prompt = "?? ", echo = true) {
         const key = await waitKey();
 
         if (echo) {
-            setStyle(styles.bold + styles.magenta);
+            setStyle(styles.bold + styles.white);
             await typeln("\b".repeat(prompt.length) + "<< " + key.key);
             resetStyle();
         }
@@ -329,12 +341,14 @@ async function puzzle1() {
         await typeln();
         await typeln("You reach out your hand to the door handle,");
         await wait(_1s);
-        await typeln("  but the moment before you touch it, the door opens!");
+        await typeln("but the moment before you touch it, the door opens!");
+        await wait(_4s);
         return true;
     }
     else {
         await typeln();
-        await typeln("You walked away.");
+        await typeln("You were just passed by...");
+        await wait(_4s);
         return false;
     }
 }
@@ -381,14 +395,13 @@ async function scene2_greeting() {
         await type(`${randomMsg(["Imagining", "Creating", "Forging"])} the world... `);
     }
     else {
-        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Transforming"])} the world... `);
+        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Terraforming", "Transforming", "Polishing"])} the world... `);
     }
     
     await wait(_4s);
-    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!"]));
-    await wait(_4s);
-
+    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!", "Ding!"]));
     await typeln();
+
     await readKey("...", false);
 
     // to the world
@@ -459,6 +472,7 @@ async function tooExhausted() {
     const later = ["another day", "later", "tomorrow"];
     await typeln(`You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
     resetStyle();
+    await wait(_4s);
 }
 
 async function reachedEOW() {
@@ -479,8 +493,7 @@ async function typeNote(note, noteColor) {
     setStyle(styles.bold + styles[noteColor]);
     for (let i = 0; i < noteLines.length; i++) {
         const line = noteLines[i];
-        // TODO: Add leading \t for desktop?
-        await typeln("▌ " + line);
+        await typeln(line);
         await wait(_hs);
     }
     resetStyle();
@@ -510,10 +523,8 @@ async function scene4_world(note) {
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
             // TODO: Move utilities to submenu or review mode?
-            { text: "Copy the note.", choice: "copy" },
-            // TODO: Combine with hint
-            { text: "Reveal the author.", choice: "author" },
             { text: "Show hint.", choice: "hint" },
+            { text: "Copy the note.", choice: "copy" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
@@ -602,14 +613,18 @@ async function scene4_world(note) {
             await typeln();
         }
         
-        if (choice === "author") {
-            await typeln();
-            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
-            await typeln();
-        }
-        
         if (choice === "hint") {
-            if (note.meta.hints.length > 0) {
+            if (randomYes(0.1)) {
+                await typeln();
+                await typeln("And how will this help you?");
+                await typeln();
+            }
+            else if (randomYes(0.33)) {
+                await typeln();
+                await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
+                await typeln();
+            }
+            else if (note.meta.hints && note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
                 const hint = note.meta.hints[hintIndex];
                 const hintLines = hint.split('\n');
@@ -617,14 +632,12 @@ async function scene4_world(note) {
                 await typeln();
                 for (let i = 0; i < hintLines.length; i++) {
                     const line = hintLines[i];
-                    // TODO: Add leading \t for desktop?
-                    await typeln("▌ " + line);
+                    await typeln(line);
                     await wait(_hs);
                 }
                 await typeln();
             }
             else {
-                // TODO: Randomly deny hints, even there is some
                 await typeln();
                 await typeln("No hints available.");
                 await typeln();
