@@ -472,6 +472,7 @@ async function tooExhausted() {
     const later = ["another day", "later", "tomorrow"];
     await typeln(`You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
     resetStyle();
+    await wait(_4s);
 }
 
 async function reachedEOW() {
@@ -522,10 +523,8 @@ async function scene4_world(note) {
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
             // TODO: Move utilities to submenu or review mode?
-            { text: "Copy the note.", choice: "copy" },
-            // TODO: Combine with hint
-            { text: "Reveal the author.", choice: "author" },
             { text: "Show hint.", choice: "hint" },
+            { text: "Copy the note.", choice: "copy" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
@@ -614,14 +613,18 @@ async function scene4_world(note) {
             await typeln();
         }
         
-        if (choice === "author") {
-            await typeln();
-            await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
-            await typeln();
-        }
-        
         if (choice === "hint") {
-            if (note.meta.hints.length > 0) {
+            if (randomYes(0.1)) {
+                await typeln();
+                await typeln("And how will this help you?");
+                await typeln();
+            }
+            else if (randomYes(0.33)) {
+                await typeln();
+                await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
+                await typeln();
+            }
+            else if (note.meta.hints && note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
                 const hint = note.meta.hints[hintIndex];
                 const hintLines = hint.split('\n');
@@ -629,14 +632,12 @@ async function scene4_world(note) {
                 await typeln();
                 for (let i = 0; i < hintLines.length; i++) {
                     const line = hintLines[i];
-                    // TODO: Add leading \t for desktop?
-                    await typeln("▌ " + line);
+                    await typeln(line);
                     await wait(_hs);
                 }
                 await typeln();
             }
             else {
-                // TODO: Randomly deny hints, even there is some
                 await typeln();
                 await typeln("No hints available.");
                 await typeln();
