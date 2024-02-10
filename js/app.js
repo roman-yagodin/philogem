@@ -45,7 +45,7 @@ class Game {
 
     loadOrNew() {
         // TODO: Detect localStorage support
-        const stateStr = localStorage.getItem("tgl_game_state");
+        const stateStr = localStorage.getItem("protogame_state");
         if (stateStr) {
             this.state = JSON.parse(stateStr);
             // TODO: Check format of resulting state - if may be from old version
@@ -67,7 +67,7 @@ class Game {
     }
 
     saveState() {
-        localStorage.setItem("tgl_game_state", JSON.stringify(this.state));
+        localStorage.setItem("protogame_state", JSON.stringify(this.state));
     }
 
     resetActionCounter() {
