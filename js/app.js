@@ -44,10 +44,10 @@ class Game {
     }
 
     loadOrNew() {
+        // TODO: Detect localStorage support
         const stateStr = localStorage.getItem("tgl_game_state");
         if (stateStr) {
             this.state = JSON.parse(stateStr);
-            // TODO: Try-catch
             // TODO: Check format of resulting state - if may be from old version
         }
         else {
@@ -236,13 +236,17 @@ async function menu(options, showOptions = true) {
 
 async function waitKey() {
     t.focus();
+    // use it like a buffer
     game.lastKey = null;
     return new Promise((resolve) => {
         const interval = setInterval(() => {
-            if (game.lastKey) {
-                clearInterval(interval);
-                console.log({key: game.lastKey});
-                resolve(game.lastKey);
+            const key = game.lastKey;
+            if (key) {
+                if (key.key !== "Shift" && key.key !== "Control" && key.key !== "Alt" && key.key !== "Meta") {
+                    clearInterval(interval);
+                    console.log({key: game.lastKey});
+                    resolve(game.lastKey);
+                }
             }
         }, 100)
     });
@@ -418,7 +422,7 @@ async function scene2_greeting() {
             return scene4_world(note);
         }
         else {
-            // TODO: Your track is lost, return to main menu?
+            // TODO: Your track is lost, return to main menu or try previous breadcrumbs?
             throw new Error(`Note not found: ${lastNoteId}`);
         }
     }
@@ -523,7 +527,7 @@ async function scene4_world(note) {
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
             // TODO: Move utilities to submenu or review mode?
-            { text: "Show hint.", choice: "hint" },
+            { text: "Reveal hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
@@ -677,14 +681,13 @@ export class App {
         t.open(document.getElementById('terminal'));
         fitAddon.fit();
 
-        t.attachCustomKeyEventHandler(e => {
-            //console.log(e);
-            if (e.type === "keyup") {
-                window.game.lastKey = e;
+        t.attachCustomKeyEventHandler(evt => {
+            if (evt.type === "keyup") {
+                window.game.lastKey = evt;
             }
         });
 
-        window.addEventListener("resize", (e) => {
+        window.addEventListener("resize", evt => {
             fitAddon.fit();
         });
     }
