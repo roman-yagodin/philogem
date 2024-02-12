@@ -44,10 +44,10 @@ class Game {
     }
 
     loadOrNew() {
-        const stateStr = localStorage.getItem("tgl_game_state");
+        // TODO: Detect localStorage support
+        const stateStr = localStorage.getItem("protogame_state");
         if (stateStr) {
             this.state = JSON.parse(stateStr);
-            // TODO: Try-catch
             // TODO: Check format of resulting state - if may be from old version
         }
         else {
@@ -67,7 +67,7 @@ class Game {
     }
 
     saveState() {
-        localStorage.setItem("tgl_game_state", JSON.stringify(this.state));
+        localStorage.setItem("protogame_state", JSON.stringify(this.state));
     }
 
     resetActionCounter() {
@@ -226,8 +226,8 @@ async function menu(options, showOptions = true) {
     }
 
     while (true) {
-        const key = await readKey();
-        const numKey = parseInt(key);
+        const evt = await readKey("??", true);
+        const numKey = evt.keyCode - 48;
         if (numKey !== NaN && numKey >= 0 && numKey < options.length) {
             return options[numKey].choice;
         }
@@ -236,19 +236,34 @@ async function menu(options, showOptions = true) {
 
 async function waitKey() {
     t.focus();
+    // use it like a buffer
     game.lastKey = null;
     return new Promise((resolve) => {
         const interval = setInterval(() => {
-            if (game.lastKey) {
-                clearInterval(interval);
-                console.log({key: game.lastKey});
-                resolve(game.lastKey);
+            const key = game.lastKey;
+            if (key) {
+                if (key.key !== "Unidentified" // Chrome and alike on Android (not working)
+                    && key.key !== "Shift" && key.key !== "Control" && key.key !== "Alt" && key.key !== "Meta") {
+                    clearInterval(interval);
+                    console.log({key: game.lastKey});
+                    resolve(game.lastKey);
+                }
             }
         }, 100)
     });
 }
 
-async function readKey(prompt = "?? ", echo = true) {
+function getKeyString(evt) {
+    if (evt) {
+        if (evt.keyCode >= 48 && evt.keyCode <= 48 + 9) {
+            return (evt.keyCode - 48).toString();
+        } 
+    }
+    return "Anykey";
+}
+
+// TODO: Semi-infinite "....." prompt
+async function readKey(prompt = "..", echo = false) {
     while (true) {
 
         // prompt
@@ -257,18 +272,18 @@ async function readKey(prompt = "?? ", echo = true) {
         resetStyle();
 
         // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
-        const key = await waitKey();
+        const evt = await waitKey();
 
         if (echo) {
             setStyle(styles.bold + styles.white);
-            await typeln("\b".repeat(prompt.length) + "<< " + key.key);
+            await typeln("\b".repeat(prompt.length) + "<< " + getKeyString(evt));
             resetStyle();
         }
         else {
             await type("\b".repeat(prompt.length));
         }
 
-        return key.key;
+        return evt;
     }
 }
 
@@ -314,12 +329,25 @@ async function puzzle1() {
     await wait(_4s);
 
     await typeln();
+
+    const optionSomething = {
+        text: `I ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["something", "*something*", "_something_"])}!`,
+        choice: "something"
+    };
+
+    const optionAnything = {
+        text: `I do ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["anything", "*anything*", "anything"])}.`,
+        choice: "anything"
+    };
+
+    const somethingOrAnything = randomInt(0,2);
+
     let choice = await menu([
         { text: "", choice: "nothing" },
-        { text: "I feel *something*!", choice: "something" },
+        somethingOrAnything === 0 ? optionSomething : optionAnything,
         { text: "I don't feel anything...", choice: "nothing" },
-        { text: "I do _feel_ anything.", choice: "anything" },
-        { text: "I feel EVERYTHING!..", choice: "everything" }
+        somethingOrAnything === 1 ? optionSomething : optionAnything,
+        { text: `I feel ${randomMsg(["everything", "EVERYTHING"])}!..`, choice: "everything" }
     ]);
     
     if (choice === "everything") {
@@ -343,6 +371,15 @@ async function puzzle1() {
         await wait(_1s);
         await typeln("but the moment before you touch it, the door opens!");
         await wait(_4s);
+        await command("CLS");
+        
+        await typeln(`You ${randomMsg(["see a", "enter the", "step into the"])} small, dark room covered in old cobweb`);
+        await typeln("with just table, chair and rusty terminal on it.");
+        await typeln();
+        await typeln("There is no doors or even windows!");
+
+        await readKey();
+        
         return true;
     }
     else {
@@ -384,25 +421,51 @@ async function scene2_greeting() {
     setStyle(styles.bold + styles.green);
     await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}!${styles.green}`);
     await typeln("> Take your time and have fun!");
+    await typeln();
     resetStyle();
 
-    // TODO: Main menu
+    let showMenu = true;
+    while (true) {
+        const choice = await menu([
+            { text: "", choice: "showMenu" },
+            { text: "Continue protogame", choice: "continue" },
+            { text: "You have emails: (1)", choice: "email" },
+            { text: "New protogame (resets progress)", choice: "newGame" }
+        ], showMenu);
+
+        showMenu = false;
+
+        if (choice === "showMenu") {
+            await typeln();
+            showMenu = true;
+        }
+        else if (choice === "continue") {
+            break;
+        }
+        else if (choice === "newGame" || choice === "email" ) {
+            setStyle(styles.bold + styles.green);
+            await typeln();
+            await typeln("> Not yet implemented.");
+            await typeln();
+            resetStyle();
+        }
+    }
 
     setStyle(styles.bold + styles.red);
     await typeln();
 
     if (game.isNewGame()) {
-        await type(`${randomMsg(["Imagining", "Creating", "Forging"])} the world... `);
+        await type(`${randomMsg(["Imagining", "Creating", "Forging"])} ${randomMsg(["the", "your"])} world... `);
     }
     else {
-        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Terraforming", "Transforming", "Polishing"])} the world... `);
+        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Terraforming", "Transforming", "Polishing"])} ${randomMsg(["the", "your"])} world... `);
     }
     
     await wait(_4s);
     await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!", "Ding!"]));
     await typeln();
 
-    await readKey("...", false);
+    await readKey();
 
     // to the world
     if (game.isNewGame()) {
@@ -418,7 +481,7 @@ async function scene2_greeting() {
             return scene4_world(note);
         }
         else {
-            // TODO: Your track is lost, return to main menu?
+            // TODO: Your track is lost, return to main menu or try previous breadcrumbs?
             throw new Error(`Note not found: ${lastNoteId}`);
         }
     }
@@ -514,7 +577,7 @@ async function scene4_world(note) {
             await typeNote(note, noteColor);
             showNote = false;
 
-            await readKey("...", false);
+            await readKey();
         }
 
         const choice = await menu([
@@ -523,7 +586,7 @@ async function scene4_world(note) {
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
             // TODO: Move utilities to submenu or review mode?
-            { text: "Show hint.", choice: "hint" },
+            { text: "Reveal hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
@@ -616,15 +679,10 @@ async function scene4_world(note) {
         if (choice === "hint") {
             if (randomYes(0.1)) {
                 await typeln();
-                await typeln("And how will this help you?");
-                await typeln();
-            }
-            else if (randomYes(0.33)) {
-                await typeln();
                 await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
                 await typeln();
             }
-            else if (note.meta.hints && note.meta.hints.length > 0) {
+            else if (randomYes(0.8) && note.meta.hints && note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
                 const hint = note.meta.hints[hintIndex];
                 const hintLines = hint.split('\n');
@@ -639,7 +697,7 @@ async function scene4_world(note) {
             }
             else {
                 await typeln();
-                await typeln("No hints available.");
+                await typeln("And how will this help you?");
                 await typeln();
             }
         }
@@ -677,14 +735,13 @@ export class App {
         t.open(document.getElementById('terminal'));
         fitAddon.fit();
 
-        t.attachCustomKeyEventHandler(e => {
-            //console.log(e);
-            if (e.type === "keyup") {
-                window.game.lastKey = e;
+        t.attachCustomKeyEventHandler(evt => {
+            if (evt.type === "keyup") {
+                window.game.lastKey = evt;
             }
         });
 
-        window.addEventListener("resize", (e) => {
+        window.addEventListener("resize", evt => {
             fitAddon.fit();
         });
     }
