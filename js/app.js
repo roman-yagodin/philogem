@@ -371,7 +371,8 @@ async function puzzle1() {
         await wait(_1s);
         await typeln("but the moment before you touch it, the door opens!");
         await wait(_4s);
-        await typeln();
+        await command("CLS");
+        
         await typeln(`You ${randomMsg(["see a", "enter the", "step into the"])} small, dark room covered in old cobweb`);
         await typeln("with just table, chair and rusty terminal on it.");
         await typeln();
@@ -420,9 +421,35 @@ async function scene2_greeting() {
     setStyle(styles.bold + styles.green);
     await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}!${styles.green}`);
     await typeln("> Take your time and have fun!");
+    await typeln();
     resetStyle();
 
-    // TODO: Main menu
+    let showMenu = true;
+    while (true) {
+        const choice = await menu([
+            { text: "", choice: "showMenu" },
+            { text: "Continue protogame", choice: "continue" },
+            { text: "You have emails: (1)", choice: "email" },
+            { text: "New protogame (resets progress)", choice: "newGame" }
+        ], showMenu);
+
+        showMenu = false;
+
+        if (choice === "showMenu") {
+            await typeln();
+            showMenu = true;
+        }
+        else if (choice === "continue") {
+            break;
+        }
+        else if (choice === "newGame" || choice === "email" ) {
+            setStyle(styles.bold + styles.green);
+            await typeln();
+            await typeln("> Not yet implemented.");
+            await typeln();
+            resetStyle();
+        }
+    }
 
     setStyle(styles.bold + styles.red);
     await typeln();
