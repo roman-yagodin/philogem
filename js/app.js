@@ -226,8 +226,8 @@ async function menu(options, showOptions = true) {
     }
 
     while (true) {
-        const key = await readKey();
-        const numKey = parseInt(key);
+        const evt = await readKey();
+        const numKey = evt.keyCode - 48;
         if (numKey !== NaN && numKey >= 0 && numKey < options.length) {
             return options[numKey].choice;
         }
@@ -242,7 +242,8 @@ async function waitKey() {
         const interval = setInterval(() => {
             const key = game.lastKey;
             if (key) {
-                if (key.key !== "Shift" && key.key !== "Control" && key.key !== "Alt" && key.key !== "Meta") {
+                if (key.key !== "Unidentified" // Chrome and alike on Android (not working)
+                    && key.key !== "Shift" && key.key !== "Control" && key.key !== "Alt" && key.key !== "Meta") {
                     clearInterval(interval);
                     console.log({key: game.lastKey});
                     resolve(game.lastKey);
@@ -250,6 +251,15 @@ async function waitKey() {
             }
         }, 100)
     });
+}
+
+function getKeyString(evt) {
+    if (evt) {
+        if (evt.keyCode >= 48 && evt.keyCode <= 48 + 9) {
+            return (evt.keyCode - 48).toString();
+        } 
+    }
+    return "Anykey";
 }
 
 async function readKey(prompt = "?? ", echo = true) {
@@ -261,18 +271,18 @@ async function readKey(prompt = "?? ", echo = true) {
         resetStyle();
 
         // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
-        const key = await waitKey();
+        const evt = await waitKey();
 
         if (echo) {
             setStyle(styles.bold + styles.white);
-            await typeln("\b".repeat(prompt.length) + "<< " + key.key);
+            await typeln("\b".repeat(prompt.length) + "<< " + getKeyString(evt));
             resetStyle();
         }
         else {
             await type("\b".repeat(prompt.length));
         }
 
-        return key.key;
+        return evt;
     }
 }
 
