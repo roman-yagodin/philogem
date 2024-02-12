@@ -630,15 +630,10 @@ async function scene4_world(note) {
         if (choice === "hint") {
             if (randomYes(0.1)) {
                 await typeln();
-                await typeln("And how will this help you?");
-                await typeln();
-            }
-            else if (randomYes(0.33)) {
-                await typeln();
                 await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
                 await typeln();
             }
-            else if (note.meta.hints && note.meta.hints.length > 0) {
+            else if (randomYes(0.8) && note.meta.hints && note.meta.hints.length > 0) {
                 const hintIndex = randomInt(0, note.meta.hints.length);
                 const hint = note.meta.hints[hintIndex];
                 const hintLines = hint.split('\n');
@@ -653,7 +648,7 @@ async function scene4_world(note) {
             }
             else {
                 await typeln();
-                await typeln("No hints available.");
+                await typeln("And how will this help you?");
                 await typeln();
             }
         }
