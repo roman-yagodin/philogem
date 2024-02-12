@@ -226,7 +226,7 @@ async function menu(options, showOptions = true) {
     }
 
     while (true) {
-        const evt = await readKey();
+        const evt = await readKey("??", true);
         const numKey = evt.keyCode - 48;
         if (numKey !== NaN && numKey >= 0 && numKey < options.length) {
             return options[numKey].choice;
@@ -262,7 +262,8 @@ function getKeyString(evt) {
     return "Anykey";
 }
 
-async function readKey(prompt = "?? ", echo = true) {
+// TODO: Semi-infinite "....." prompt
+async function readKey(prompt = "..", echo = false) {
     while (true) {
 
         // prompt
@@ -328,12 +329,25 @@ async function puzzle1() {
     await wait(_4s);
 
     await typeln();
+
+    const optionSomething = {
+        text: `I ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["something", "*something*", "_something_"])}!`,
+        choice: "something"
+    };
+
+    const optionAnything = {
+        text: `I do ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["anything", "*anything*", "anything"])}.`,
+        choice: "anything"
+    };
+
+    const somethingOrAnything = randomInt(0,2);
+
     let choice = await menu([
         { text: "", choice: "nothing" },
-        { text: "I feel *something*!", choice: "something" },
+        somethingOrAnything === 0 ? optionSomething : optionAnything,
         { text: "I don't feel anything...", choice: "nothing" },
-        { text: "I do _feel_ anything.", choice: "anything" },
-        { text: "I feel EVERYTHING!..", choice: "everything" }
+        somethingOrAnything === 1 ? optionSomething : optionAnything,
+        { text: `I feel ${randomMsg(["everything", "EVERYTHING"])}!..`, choice: "everything" }
     ]);
     
     if (choice === "everything") {
@@ -357,6 +371,14 @@ async function puzzle1() {
         await wait(_1s);
         await typeln("but the moment before you touch it, the door opens!");
         await wait(_4s);
+        await typeln();
+        await typeln(`You ${randomMsg(["see a", "enter the", "step into the"])} small, dark room covered in old cobweb`);
+        await typeln("with just table, chair and rusty terminal on it.");
+        await typeln();
+        await typeln("There is no doors or even windows!");
+
+        await readKey();
+        
         return true;
     }
     else {
@@ -406,17 +428,17 @@ async function scene2_greeting() {
     await typeln();
 
     if (game.isNewGame()) {
-        await type(`${randomMsg(["Imagining", "Creating", "Forging"])} the world... `);
+        await type(`${randomMsg(["Imagining", "Creating", "Forging"])} ${randomMsg(["the", "your"])} world... `);
     }
     else {
-        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Terraforming", "Transforming", "Polishing"])} the world... `);
+        await type(`${randomMsg(["Re-imagining", "Re-thinking", "Re-creating", "Twisting", "Mutating", "Terraforming", "Transforming", "Polishing"])} ${randomMsg(["the", "your"])} world... `);
     }
     
     await wait(_4s);
     await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!", "Ding!"]));
     await typeln();
 
-    await readKey("...", false);
+    await readKey();
 
     // to the world
     if (game.isNewGame()) {
@@ -528,7 +550,7 @@ async function scene4_world(note) {
             await typeNote(note, noteColor);
             showNote = false;
 
-            await readKey("...", false);
+            await readKey();
         }
 
         const choice = await menu([
