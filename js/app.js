@@ -6,7 +6,7 @@ import { DEBUG } from "./debug.js";
 const EOL = "\n\r";
 
 // type interval
-const _1t = 10;
+const _1t = 16;
 
 // wait intervals
 const _1s = 1000;
@@ -373,7 +373,7 @@ async function puzzle1() {
         await wait(_4s);
         await command("CLS");
         
-        await typeln(`You ${randomMsg(["see a", "enter the", "step into the"])} small, dark room covered in old cobweb`);
+        await typeln(`You ${randomMsg(["see a", "enter the", "step into the"])} small, dark room covered in old webs`);
         await typeln("with just table, chair and rusty terminal on it.");
         await typeln();
         await typeln("There is no doors or even windows!");
@@ -580,13 +580,14 @@ async function scene4_world(note) {
             await readKey();
         }
 
+        // TODO: Positive/negative switch: "Don't follow"
         const choice = await menu([
             { text: "", choice: "showMenu" },
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
             // TODO: Move utilities to submenu or review mode?
-            { text: "Reveal hint.", choice: "hint" },
+            { text: "Request hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
@@ -697,7 +698,7 @@ async function scene4_world(note) {
             }
             else {
                 await typeln();
-                await typeln("And how will this help you?");
+                await typeln("And how would this help you?");
                 await typeln();
             }
         }
