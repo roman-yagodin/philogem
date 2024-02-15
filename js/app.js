@@ -6,10 +6,10 @@ import { DEBUG } from "./debug.js";
 const EOL = "\n\r";
 
 // type interval
-const _1t = 16;
+const _1t = 15;
 
 // wait intervals
-const _1s = 1000;
+const _1s = 1024;
 const _hs = _1s / 2;
 const _2s = _1s * 2;
 const _3s = _1s * 3;
@@ -589,6 +589,7 @@ async function scene4_world(note) {
             // TODO: Move utilities to submenu or review mode?
             { text: "Request hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
+            { text: "Repeat.", choice: "repeat" },
             { text: "Leave...", choice: "leave" },
         ], showMenu);
         showMenu = false;
@@ -603,6 +604,12 @@ async function scene4_world(note) {
 
         if (choice === "showMenu") {
             await typeln();
+            showMenu = true;
+        }
+
+        if (choice === "repeat") {
+            await typeln();
+            showNote = true;
             showMenu = true;
         }
 

@@ -1,6 +1,6 @@
 ---
 author: Lewis Carroll
-colors: [ yellow, orange, red ]
+colors: [ white, yellow, orange, red ]
 hints:
   - How are you doing?
 ---
