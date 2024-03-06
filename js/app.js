@@ -150,12 +150,13 @@ async function typeln(s, typeDelay) {
     }
 }
     
-async function type(s, typeDelay = -1) {
+async function type(s, typeDelay = _1t) {
     
+    /*
     // longer type delay for longer strings
     if (typeDelay < 0) {
         typeDelay = s.length * 0.025 + _1t;
-    }
+    }*/
 
     s = s.replace("\\b", "\b");
 
@@ -179,17 +180,18 @@ async function type(s, typeDelay = -1) {
         let i = 0;
         let j = 0;
         const interval = setInterval(() => {
-            const si = s[i];
             if (j > 0) {
                 j--;
             }
             else {
-                // additional delays for punctuation
-                if (si == "." || si == "," || si == "!" || si == "?" || si == ";" || si == ":") {
-                    j = 3;
-                }
-                else if (si == " " || si == "-") {
-                    j = 2;
+                const si = s[i];
+                const sx = s.substring(i);
+                
+                // TODO: Implement output buffer with chars to type and delay cycles
+                // additional delay cycles for punctuation
+                const punctMatch = sx.match(/^[\.,!\?;:-\s]+/);
+                if (punctMatch && punctMatch.length > 0) {
+                    j = punctMatch[0].length + 1;
                 }
 
                 i++;
@@ -467,7 +469,7 @@ async function scene2_greeting() {
     }
     
     await wait(_4s);
-    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Slap!", "Plop!", "Boom!", "Ding!"]));
+    await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Zzz...", "Shhh...", "Flip!", "Flop!", "Slap!", "Plop!", "Boom!", "Ding!"]));
     await typeln();
 
     await readKey();
@@ -577,8 +579,19 @@ async function scene4_world(note) {
     while(true) {
 
         if (showNote) {
+
             await typeln();
             await command("CLS");
+
+            /*
+            if (game.state.breadCrumbs.includes(note.id)) {
+                setStyle(styles.bold + styles.red);
+                await typeln("Seems like you've already been here...");
+                await typeln();
+                resetStyle();
+            }
+            */
+
             await typeNote(note, noteColor);
             showNote = false;
 
@@ -594,12 +607,14 @@ async function scene4_world(note) {
             // TODO: Move utilities to submenu or review mode?
             { text: "Request hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
+            // TODO: Repeat slowly?
             { text: "Repeat.", choice: "repeat" },
+            // TODO: "Go back" action?
             { text: "Leave...", choice: "leave" },
         ];
 
         if (note.id.includes("-")) {
-            const insertIdx = choices.findIndex(c => c.choice === "hint");
+            const insertIdx = choices.findIndex(c => c.choice === "followLanguage") + 1;
             choices = choices.toSpliced(insertIdx, 0, {
                 text: "In English, please!",
                 choice: "inEnglish"
@@ -607,7 +622,7 @@ async function scene4_world(note) {
         }
 
         if (note.meta.link) {
-            const insertIdx = choices.findIndex(c => c.choice === "followLanguage");
+            const insertIdx = choices.findIndex(c => c.choice === "hint");
             choices = choices.toSpliced(insertIdx, 0, {
                 text: "Follow link.",
                 choice: "followLink"
@@ -702,14 +717,7 @@ async function scene4_world(note) {
 
         if (choice === "inEnglish") {
             const baseId = note.id.replace(/-.*/g, "");
-            const nextNote = game.notes.find(n => {
-                // count breadcrumbs or not?
-                if (n.id === baseId) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = game.notes.find(n => n.id === baseId);
             if (nextNote) {
                 note = nextNote;
                 game.state.breadCrumbs.push(note.id);
@@ -728,14 +736,7 @@ async function scene4_world(note) {
                 window.open(note.meta.link, "_blank");
             }
             else {
-                const nextNote = game.notes.find(n => {
-                    // count breadcrumbs or not?
-                    if (n.id === note.meta.link) {
-                        return true;
-                    }
-                    return false;
-                });
-    
+                const nextNote = game.notes.find(n => n.id === note.meta.link);
                 if (nextNote) {
                     note = nextNote;
                     game.state.breadCrumbs.push(note.id);
