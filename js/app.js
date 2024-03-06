@@ -150,8 +150,13 @@ async function typeln(s, typeDelay) {
     }
 }
     
-async function type(s, typeDelay = _1t) {
+async function type(s, typeDelay = -1) {
     
+    // longer type delay for longer strings
+    if (typeDelay < 0) {
+        typeDelay = s.length * 0.025 + _1t;
+    }
+
     s = s.replace("\\b", "\b");
 
     // bold
@@ -331,12 +336,12 @@ async function puzzle1() {
     await typeln();
 
     const optionSomething = {
-        text: `I ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["something", "*something*", "_something_"])}!`,
+        text: `I feel ${randomMsg(["something", "*something*", "_something_"])}!`,
         choice: "something"
     };
 
     const optionAnything = {
-        text: `I do ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["anything", "*anything*", "anything"])}.`,
+        text: `I do feel ${randomMsg(["anything", "*anything*", "anything"])}.`,
         choice: "anything"
     };
 
