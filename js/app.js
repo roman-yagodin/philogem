@@ -6,10 +6,10 @@ import { DEBUG } from "./debug.js";
 const EOL = "\n\r";
 
 // type interval
-const _1t = 16;
+const _1t = 15;
 
 // wait intervals
-const _1s = 1000;
+const _1s = 1024;
 const _hs = _1s / 2;
 const _2s = _1s * 2;
 const _3s = _1s * 3;
@@ -150,8 +150,13 @@ async function typeln(s, typeDelay) {
     }
 }
     
-async function type(s, typeDelay = _1t) {
+async function type(s, typeDelay = -1) {
     
+    // longer type delay for longer strings
+    if (typeDelay < 0) {
+        typeDelay = s.length * 0.025 + _1t;
+    }
+
     s = s.replace("\\b", "\b");
 
     // bold
@@ -331,12 +336,12 @@ async function puzzle1() {
     await typeln();
 
     const optionSomething = {
-        text: `I ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["something", "*something*", "_something_"])}!`,
+        text: `I feel ${randomMsg(["something", "*something*", "_something_"])}!`,
         choice: "something"
     };
 
     const optionAnything = {
-        text: `I do ${randomMsg(["feel", "*feel*", "_feel_"])} ${randomMsg(["anything", "*anything*", "anything"])}.`,
+        text: `I do feel ${randomMsg(["anything", "*anything*", "anything"])}.`,
         choice: "anything"
     };
 
@@ -581,7 +586,7 @@ async function scene4_world(note) {
         }
 
         // TODO: Positive/negative switch: "Don't follow"
-        const choice = await menu([
+        let choices = [
             { text: "", choice: "showMenu" },
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
@@ -589,8 +594,18 @@ async function scene4_world(note) {
             // TODO: Move utilities to submenu or review mode?
             { text: "Request hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
+            { text: "Repeat.", choice: "repeat" },
             { text: "Leave...", choice: "leave" },
-        ], showMenu);
+        ];
+
+        if (note.id.includes("-")) {
+            choices = choices.toSpliced(4, 0, {
+                text: "In English, please!",
+                choice: "inEnglish"
+            });
+        }
+
+        const choice = await menu(choices, showMenu);
         showMenu = false;
         
         game.decrementActionCounter();
@@ -603,6 +618,12 @@ async function scene4_world(note) {
 
         if (choice === "showMenu") {
             await typeln();
+            showMenu = true;
+        }
+
+        if (choice === "repeat") {
+            await typeln();
+            showNote = true;
             showMenu = true;
         }
 
@@ -652,6 +673,29 @@ async function scene4_world(note) {
         if (choice === "followLanguage") {
             const nextNote = game.notes.find(n => {
                 if (n.meta.lang === note.meta.lang && !game.state.breadCrumbs.includes(n.id)) {
+                    return true;
+                }
+                return false;
+            });
+
+            if (nextNote) {
+                note = nextNote;
+                game.state.breadCrumbs.push(note.id);
+                game.saveState();
+            }
+            else {
+                await reachedEOW();
+                noteColor = randomNoteColor(note);
+            }
+            showNote = true;
+            showMenu = true;
+        }
+
+        if (choice === "inEnglish") {
+            const baseId = note.id.replace(/-.*/g, "");
+            const nextNote = game.notes.find(n => {
+                // count breadcrumbs or not?
+                if (n.id === baseId) {
                     return true;
                 }
                 return false;
