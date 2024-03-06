@@ -581,7 +581,7 @@ async function scene4_world(note) {
         }
 
         // TODO: Positive/negative switch: "Don't follow"
-        const choice = await menu([
+        let choices = [
             { text: "", choice: "showMenu" },
             { text: "Follow author.", choice: "followAuthor" },
             { text: "Follow color.", choice: "followColor" },
@@ -591,7 +591,16 @@ async function scene4_world(note) {
             { text: "Copy the note.", choice: "copy" },
             { text: "Repeat.", choice: "repeat" },
             { text: "Leave...", choice: "leave" },
-        ], showMenu);
+        ];
+
+        if (note.id.includes("-")) {
+            choices = choices.toSpliced(4, 0, {
+                text: "In English, please!",
+                choice: "inEnglish"
+            });
+        }
+
+        const choice = await menu(choices, showMenu);
         showMenu = false;
         
         game.decrementActionCounter();
@@ -659,6 +668,29 @@ async function scene4_world(note) {
         if (choice === "followLanguage") {
             const nextNote = game.notes.find(n => {
                 if (n.meta.lang === note.meta.lang && !game.state.breadCrumbs.includes(n.id)) {
+                    return true;
+                }
+                return false;
+            });
+
+            if (nextNote) {
+                note = nextNote;
+                game.state.breadCrumbs.push(note.id);
+                game.saveState();
+            }
+            else {
+                await reachedEOW();
+                noteColor = randomNoteColor(note);
+            }
+            showNote = true;
+            showMenu = true;
+        }
+
+        if (choice === "inEnglish") {
+            const baseId = note.id.replace(/-.*/g, "");
+            const nextNote = game.notes.find(n => {
+                // count breadcrumbs or not?
+                if (n.id === baseId) {
                     return true;
                 }
                 return false;
