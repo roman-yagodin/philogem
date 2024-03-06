@@ -345,13 +345,13 @@ async function puzzle1() {
         choice: "anything"
     };
 
-    const somethingOrAnything = randomInt(0,2);
+    const somethingOrAnything = randomYes(0.5);
 
     let choice = await menu([
         { text: "", choice: "nothing" },
-        somethingOrAnything === 0 ? optionSomething : optionAnything,
+        !somethingOrAnything ? optionSomething : optionAnything,
         { text: "I don't feel anything...", choice: "nothing" },
-        somethingOrAnything === 1 ? optionSomething : optionAnything,
+        !!somethingOrAnything ? optionSomething : optionAnything,
         { text: `I feel ${randomMsg(["everything", "EVERYTHING"])}!..`, choice: "everything" }
     ]);
     
@@ -599,9 +599,18 @@ async function scene4_world(note) {
         ];
 
         if (note.id.includes("-")) {
-            choices = choices.toSpliced(4, 0, {
+            const insertIdx = choices.findIndex(c => c.choice === "hint");
+            choices = choices.toSpliced(insertIdx, 0, {
                 text: "In English, please!",
                 choice: "inEnglish"
+            });
+        }
+
+        if (note.meta.link) {
+            const insertIdx = choices.findIndex(c => c.choice === "followLanguage");
+            choices = choices.toSpliced(insertIdx, 0, {
+                text: "Follow link.",
+                choice: "followLink"
             });
         }
 
@@ -712,6 +721,33 @@ async function scene4_world(note) {
             }
             showNote = true;
             showMenu = true;
+        }
+
+        if (choice === "followLink") {
+            if (note.meta.link.startsWith("http")) {
+                window.open(note.meta.link, "_blank");
+            }
+            else {
+                const nextNote = game.notes.find(n => {
+                    // count breadcrumbs or not?
+                    if (n.id === note.meta.link) {
+                        return true;
+                    }
+                    return false;
+                });
+    
+                if (nextNote) {
+                    note = nextNote;
+                    game.state.breadCrumbs.push(note.id);
+                    game.saveState();
+                }
+                else {
+                    await reachedEOW();
+                    noteColor = randomNoteColor(note);
+                }
+                showNote = true;
+                showMenu = true;
+            }
         }
         
         if (choice === "copy") {
