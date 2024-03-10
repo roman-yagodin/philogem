@@ -48,13 +48,17 @@ class Game {
         const stateStr = localStorage.getItem("protogame_state");
         if (stateStr) {
             this.state = JSON.parse(stateStr);
-            // TODO: Check format of resulting state - if may be from old version
+            // TODO: Tweak format of resulting state - if may be from old version
+            if (typeof this.state.playerLevel === "undefined") {
+                this.state.playerLevel = 0;
+            }
         }
         else {
             this.state = {
                 actionCounter: 0,
                 playerName: randomMsg(playerNames),
                 returnAfter: null,
+                playerLevel: 0,
                 breadCrumbs: []
             };
 
@@ -422,6 +426,7 @@ async function scene2_greeting() {
     }
     else {
         if (game.state.actionCounter <= 0) {
+            game.state.playerLevel++;
             game.resetActionCounter();
             game.saveState();
         }
@@ -430,7 +435,7 @@ async function scene2_greeting() {
     // greeting
     const hello = game.isNewGame() ? "Hello" : "Welcome back"
     setStyle(styles.bold + styles.green);
-    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}!${styles.green}`);
+    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}${styles.green} of level ${styles.cyan}${game.state.playerLevel}!${styles.green}`);
     await typeln("> Take your time and have fun!");
     await typeln();
     resetStyle();
@@ -636,7 +641,12 @@ async function scene4_world(note) {
         const choice = await menu(choices, showMenu);
         showMenu = false;
         
-        game.decrementActionCounter();
+        if (choice.startsWith("follow")) {
+            game.decrementActionCounter(2);
+        }
+        else {
+            game.decrementActionCounter(1);
+        }
         game.saveState();
 
         if (game.state.actionCounter <= 0) {
@@ -789,8 +799,8 @@ async function scene4_world(note) {
         }
         
         if (choice === "leave") {
-            game.incrementActionCounter(randomInt(5, 10));
-            game.saveState();
+            //game.incrementActionCounter(randomInt(5, 10));
+            //game.saveState();
             setStyle(styles.bold + styles.green);
             await typeln();
             await typeln(`> Goodbye, ${styles.cyan}${game.state.playerName}${styles.green}! And come back soon.`);
