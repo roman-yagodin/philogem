@@ -5,6 +5,7 @@
 ## What's this all about?
 
 It's up to you to [discover](https://roman-yagodin.github.io/protogame/)!
+Don't take it too seriously - have fun!
 
 ## Licenses
 
@@ -16,5 +17,3 @@ All author rights to the original content used by this program belongs to its re
 If you (as author or copyright holder) feel your rights were somethat affected in a way you'd not want to,
 please contact me via email from my [GitHub profile](https://github.com/roman-yagodin/protogame)
 or open an [issue](https://github.com/roman-yagodin/protogame/issues)/[discussion](https://github.com/roman-yagodin/protogame/discussions).
-
-Have fun!
