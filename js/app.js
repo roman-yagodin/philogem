@@ -821,11 +821,17 @@ export class App {
         t.open(document.getElementById('terminal'));
         fitAddon.fit();
 
+        t.onKey(e => {
+            window.game.lastKey = e.domEvent;
+        });
+
+        /*
         t.attachCustomKeyEventHandler(evt => {
             if (evt.type === "keyup") {
                 window.game.lastKey = evt;
             }
         });
+        */
 
         window.addEventListener("resize", evt => {
             fitAddon.fit();
