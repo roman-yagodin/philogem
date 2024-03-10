@@ -152,6 +152,10 @@ async function typeln(s, typeDelay) {
     
 async function type(s, typeDelay = _1t) {
     
+    if (!s) {
+        return new Promise().resolve("done");
+    }
+
     /*
     // longer type delay for longer strings
     if (typeDelay < 0) {
