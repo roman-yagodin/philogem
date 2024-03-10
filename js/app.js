@@ -237,8 +237,8 @@ async function menu(options, showOptions = true) {
     }
 
     while (true) {
-        const evt = await readKey("??", true);
-        const numKey = evt.keyCode - 48;
+        const key = await readKey("??", true);
+        const numKey = parseInt(key);
         if (numKey !== NaN && numKey >= 0 && numKey < options.length) {
             return options[numKey].choice;
         }
@@ -253,22 +253,22 @@ async function waitKey() {
         const interval = setInterval(() => {
             const key = game.lastKey;
             if (key) {
-                if (key.key !== "Unidentified" // Chrome and alike on Android (not working)
-                    && key.key !== "Shift" && key.key !== "Control" && key.key !== "Alt" && key.key !== "Meta") {
-                    clearInterval(interval);
-                    console.log({key: game.lastKey});
-                    resolve(game.lastKey);
-                }
+                clearInterval(interval);
+                console.log({key: game.lastKey});
+                resolve(game.lastKey);
             }
         }, 100)
     });
 }
 
-function getKeyString(evt) {
-    if (evt) {
-        if (evt.keyCode >= 48 && evt.keyCode <= 48 + 9) {
-            return (evt.keyCode - 48).toString();
-        } 
+function getKeyString(key) {
+    if (key) {
+        if (key === "\r") {
+            return "Enter";
+        }
+        else if (/^[0-9]$/.test(key)) {
+            return key;
+        }
     }
     return "Anykey";
 }
@@ -283,18 +283,18 @@ async function readKey(prompt = "..", echo = false) {
         resetStyle();
 
         // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
-        const evt = await waitKey();
+        const key = await waitKey();
 
         if (echo) {
             setStyle(styles.bold + styles.white);
-            await typeln("\b".repeat(prompt.length) + "<< " + getKeyString(evt));
+            await typeln("\b".repeat(prompt.length) + "<< " + getKeyString(key));
             resetStyle();
         }
         else {
             await type("\b".repeat(prompt.length));
         }
 
-        return evt;
+        return key;
     }
 }
 
@@ -821,17 +821,9 @@ export class App {
         t.open(document.getElementById('terminal'));
         fitAddon.fit();
 
-        t.onKey(e => {
-            window.game.lastKey = e.domEvent;
+        t.onData(e => {
+            window.game.lastKey = e;
         });
-
-        /*
-        t.attachCustomKeyEventHandler(evt => {
-            if (evt.type === "keyup") {
-                window.game.lastKey = evt;
-            }
-        });
-        */
 
         window.addEventListener("resize", evt => {
             fitAddon.fit();
