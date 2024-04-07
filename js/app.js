@@ -16,6 +16,10 @@ const _3s = _1s * 3;
 const _4s = _1s * 4;
 const _5s = _1s * 5;
 
+function sec(x) {
+    return _1s * x;
+}
+
 const styles = {
     default: "\x1b[0m",
     bold: "\x1b[1m",
@@ -277,7 +281,12 @@ function getKeyString(key) {
     return "Anykey";
 }
 
-// TODO: Semi-infinite "....." prompt
+async function readAutoKey() {
+    const key = await waitAutoKey(sec(5), randomInt(sec(7), sec(15)), "\r");
+    await typeln();
+    return key;
+}
+
 async function readKey(prompt = "..", echo = false) {
     while (true) {
 
@@ -286,7 +295,6 @@ async function readKey(prompt = "..", echo = false) {
         await type(prompt);
         resetStyle();
 
-        // TODO: Add option to don't await input indefinitely - e.g. set timer and "run" CLS command from time to time. 
         const key = await waitKey();
 
         if (echo) {
@@ -393,7 +401,7 @@ async function puzzle1() {
         await typeln();
         await typeln("There is no doors or even windows!");
 
-        await readKey();
+        await readAutoKey();
         
         return true;
     }
@@ -481,7 +489,7 @@ async function scene2_greeting() {
     await typeln(randomMsg(["Done.", "Done.", "Yes!", "Meow!", "Wow!", "Clap!", "Zzz...", "Shhh...", "Flip!", "Flop!", "Slap!", "Plop!", "Boom!", "Ding!"]));
     await typeln();
 
-    await readKey();
+    await readAutoKey();
 
     // to the world
     if (game.isNewGame()) {
@@ -813,6 +821,55 @@ async function scene4_world(note) {
     return false;
 }
 
+/**
+ * @param {*} silentTime Initial time to wait w/o typing anything
+ * @param {*} maxWaitTime Max. time to wait for user input before simulating key press
+ * @param {*} autoKey Key to pass as if user pressed it
+ * @returns 
+ */
+async function waitAutoKey(silentTime, maxWaitTime, autoKey) {
+    t.focus();
+    await type("..");
+
+    const pollInterval = 100;
+    const typeDelay = 500;
+    let totalWaitTime = 0;
+    let typeWaitTime = 0;
+    
+    // use it like a buffer
+    game.lastKey = null;
+    return new Promise((resolve) => {
+        const interval = setInterval(() => {
+            totalWaitTime += pollInterval;
+            
+            if (totalWaitTime > silentTime) {
+                typeWaitTime += pollInterval;
+                if (typeWaitTime > typeDelay) {
+                    t.write(".");
+                    typeWaitTime = 0;
+                }
+            }
+
+            if (totalWaitTime > maxWaitTime) {
+                game.lastKey = autoKey;
+            }
+
+            const key = game.lastKey;
+            if (key) {
+                clearInterval(interval);
+                console.log({key: game.lastKey});
+                resolve(game.lastKey);
+            }
+        }, pollInterval);
+    });
+}
+
+async function test() {
+
+    const key = await waitAutoKey(_5s, _5s * 2, "\r");
+    return true;
+}
+
 export class App {
     init() {
         const t = new Terminal({
@@ -841,6 +898,9 @@ export class App {
     }
 
     async main() {
+
+        //await test();
+
         await scene1_puzzlebox();
         await command("CLS");
         setTheme(bowTheme);
