@@ -282,8 +282,11 @@ function getKeyString(key) {
 }
 
 async function readAutoKey() {
-    const key = await waitAutoKey(sec(5), randomInt(sec(7), sec(15)), "\r");
-    await typeln();
+    setStyle(styles.faint + styles.white);
+    const key = await waitAutoKey(sec(5), randomInt(sec(8), sec(16)), "\r");
+    await moveCursorHome();
+    resetStyle();
+
     return key;
 }
 
@@ -397,6 +400,7 @@ async function puzzle1() {
         await command("CLS");
         
         await typeln(`You ${randomMsg(["see a", "enter the", "step into the"])} small, dark room covered in old webs`);
+        await wait(_hs);
         await typeln("with just table, chair and rusty terminal on it.");
         await typeln();
         await typeln("There is no doors or even windows!");
@@ -452,7 +456,7 @@ async function scene2_greeting() {
     while (true) {
         const choice = await menu([
             { text: "", choice: "showMenu" },
-            { text: "Continue protogame", choice: "continue" },
+            { text: `Continue ${randomMsg(["adventure", "your journey"])}`, choice: "continue" },
             { text: "You have emails: (1)", choice: "email" },
             { text: "New protogame (resets progress)", choice: "newGame" }
         ], showMenu);
@@ -612,7 +616,7 @@ async function scene4_world(note) {
             await typeNote(note, noteColor);
             showNote = false;
 
-            await readKey();
+            await readAutoKey();
         }
 
         // TODO: Positive/negative switch: "Don't follow"
@@ -864,9 +868,12 @@ async function waitAutoKey(silentTime, maxWaitTime, autoKey) {
     });
 }
 
-async function test() {
+/** CSI Ps G: Moves cursor to column #1, without cleanup */
+async function moveCursorHome() {
+    await type("\x9B1G");
+}
 
-    const key = await waitAutoKey(_5s, _5s * 2, "\r");
+async function test() {
     return true;
 }
 
@@ -898,9 +905,7 @@ export class App {
     }
 
     async main() {
-
         //await test();
-
         await scene1_puzzlebox();
         await command("CLS");
         setTheme(bowTheme);
