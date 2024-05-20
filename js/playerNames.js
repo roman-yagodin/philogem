@@ -16,4 +16,6 @@ export const playerNames = [
     "adventurer",
     "traveler",
     "wanderer",
+    "protagonist",
+    "actor"
 ];

@@ -49,7 +49,7 @@ class Game {
 
     loadOrNew() {
         // TODO: Detect localStorage support
-        const stateStr = localStorage.getItem("protogame_state");
+        const stateStr = localStorage.getItem("philogem_state");
         if (stateStr) {
             this.state = JSON.parse(stateStr);
             // TODO: Tweak format of resulting state - if may be from old version
@@ -75,7 +75,7 @@ class Game {
     }
 
     saveState() {
-        localStorage.setItem("protogame_state", JSON.stringify(this.state));
+        localStorage.setItem("philogem_state", JSON.stringify(this.state));
     }
 
     resetActionCounter() {
@@ -453,12 +453,13 @@ async function scene2_greeting() {
     resetStyle();
 
     let showMenu = true;
+    const adventure = randomMsg(["adventure", "your journey"]);
     while (true) {
         const choice = await menu([
             { text: "", choice: "showMenu" },
-            { text: `Continue ${randomMsg(["adventure", "your journey"])}`, choice: "continue" },
+            { text: `Continue ${adventure}`, choice: "continue" },
             { text: "You have emails: (1)", choice: "email" },
-            { text: "New protogame (resets progress)", choice: "newGame" }
+            { text: `New ${adventure} (resets progress)`, choice: "newGame" }
         ], showMenu);
 
         showMenu = false;
