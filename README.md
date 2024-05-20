@@ -5,7 +5,7 @@
 ## What's this all about?
 
 It's up to you to [discover](https://roman-yagodin.github.io/protogame/)!
-Don't take it too seriously - have fun!
+Don't take it too seriously and have fun!
 
 ## Licenses
 
