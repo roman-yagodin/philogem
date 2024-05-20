@@ -431,9 +431,17 @@ async function scene1_puzzlebox() {
 async function scene2_greeting() {
     
     game.loadOrNew();
-    
+
+    // greeting
+    const hello = game.isNewGame() ? "Hello" : "Welcome back"
+    setStyle(styles.bold + styles.green);
+    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}${styles.green} of level ${styles.cyan}${game.state.playerLevel}!${styles.green}`);
+    await typeln(`> You have ${styles.cyan}${game.state.actionCounter}${styles.green} unspent AP.`)
+
     if (!game.checkReturnAfter()) {
         await tooExhausted();
+        await typeln();
+        await wait(_4s);
         return false;
     }
     else {
@@ -443,15 +451,12 @@ async function scene2_greeting() {
             game.saveState();
         }
     }
-
-    // greeting
-    const hello = game.isNewGame() ? "Hello" : "Welcome back"
-    setStyle(styles.bold + styles.green);
-    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}${styles.green} of level ${styles.cyan}${game.state.playerLevel}!${styles.green}`);
+    
     await typeln("> Take your time and have fun!");
     await typeln();
     resetStyle();
 
+    /*
     let showMenu = true;
     const adventure = randomMsg(["adventure", "your journey"]);
     while (true) {
@@ -479,6 +484,7 @@ async function scene2_greeting() {
             resetStyle();
         }
     }
+    */
 
     setStyle(styles.bold + styles.red);
     await typeln();
@@ -558,13 +564,9 @@ async function copyToClipboard(text) {
 }
 
 async function tooExhausted() {
-    setStyle(styles.bold + styles.red);
-    await typeln();
     const hasty = ["hasty", "exhausted"];
     const later = ["another day", "later", "tomorrow"];
-    await typeln(`You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
-    resetStyle();
-    await wait(_4s);
+    await typeln(`> You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
 }
 
 async function reachedEOW() {
@@ -663,7 +665,12 @@ async function scene4_world(note) {
         game.saveState();
 
         if (game.state.actionCounter <= 0) {
+            await typeln();
+            setStyle(styles.bold + styles.green);
             await tooExhausted();
+            resetStyle();
+            await typeln();
+            await wait(_4s);
             break;
         }
 
@@ -907,9 +914,11 @@ export class App {
 
     async main() {
         //await test();
-        await scene1_puzzlebox();
+        //await scene1_puzzlebox();
+        setTheme(colorTheme);
+        await scene2_greeting();
         await command("CLS");
-        setTheme(bowTheme);
+        //setTheme(bowTheme);
         await typeln("Game over.");
     }
 }
