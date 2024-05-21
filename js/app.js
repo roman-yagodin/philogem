@@ -643,8 +643,6 @@ async function scene4_world(note) {
             { text: "Copy the note.", choice: "copy" },
             // TODO: Repeat slowly?
             { text: "Repeat.", choice: "repeat" },
-            // TODO: "Go back" action?
-            { text: "Leave...", choice: "leave" },
         ];
 
         if (note.id.includes("-")) {
@@ -800,17 +798,6 @@ async function scene4_world(note) {
             await typeln();
             await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
             await typeln();
-        }
-        
-        if (choice === "leave") {
-            //game.incrementActionCounter(randomInt(5, 10));
-            //game.saveState();
-            setStyle(styles.bold + styles.green);
-            await typeln();
-            await typeln(`> Goodbye, ${styles.cyan}${game.state.playerName}${styles.green}! And come back soon.`);
-            await typeln();
-            resetStyle();
-            break;
         }
     }
 
