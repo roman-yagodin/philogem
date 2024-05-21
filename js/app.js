@@ -640,7 +640,6 @@ async function scene4_world(note) {
             { text: "Follow color.", choice: "followColor" },
             { text: "Follow language.", choice: "followLanguage" },
             // TODO: Move utilities to submenu or review mode?
-            { text: "Request hint.", choice: "hint" },
             { text: "Copy the note.", choice: "copy" },
             // TODO: Repeat slowly?
             { text: "Repeat.", choice: "repeat" },
@@ -657,7 +656,7 @@ async function scene4_world(note) {
         }
 
         if (note.meta.link) {
-            const insertIdx = choices.findIndex(c => c.choice === "hint");
+            const insertIdx = choices.findIndex(c => c.choice === "copy");
             choices = choices.toSpliced(insertIdx, 0, {
                 text: "Follow link.",
                 choice: "followLink"
@@ -801,32 +800,6 @@ async function scene4_world(note) {
             await typeln();
             await progress(`Copying to clipboard... ${wasCopied ? "Done." : "Error!"}`);
             await typeln();
-        }
-        
-        if (choice === "hint") {
-            if (randomYes(0.1)) {
-                await typeln();
-                await typeln(`The author is ${styles.cyan + styles.bold}${note.meta.author}${styles.default}.`);
-                await typeln();
-            }
-            else if (randomYes(0.8) && note.meta.hints && note.meta.hints.length > 0) {
-                const hintIndex = randomInt(0, note.meta.hints.length);
-                const hint = note.meta.hints[hintIndex];
-                const hintLines = hint.split('\n');
-
-                await typeln();
-                for (let i = 0; i < hintLines.length; i++) {
-                    const line = hintLines[i];
-                    await typeln(line);
-                    await wait(_hs);
-                }
-                await typeln();
-            }
-            else {
-                await typeln();
-                await typeln("And how would this help you?");
-                await typeln();
-            }
         }
         
         if (choice === "leave") {
