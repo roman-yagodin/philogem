@@ -150,15 +150,6 @@ function resetStyle() {
 }
 
 async function typeln(s, typeDelay) {
-    if (s) {
-        return type(s + EOL, typeDelay);
-    }
-    else {
-        return type(EOL, typeDelay);
-    }
-}
-    
-async function typeln(s, typeDelay) {
     return type(s, typeDelay, true);
 }
     
