@@ -150,20 +150,10 @@ function resetStyle() {
 }
 
 async function typeln(s, typeDelay) {
-    if (s) {
-        return type(s + EOL, typeDelay);
-    }
-    else {
-        return type(EOL, typeDelay);
-    }
+    return type(s, typeDelay, true);
 }
     
-async function type(s, typeDelay = _1t) {
-    
-    if (!s) {
-        return new Promise().resolve("done");
-    }
-
+async function type(s = "", typeDelay = _1t, eol = false) {
     /*
     // longer type delay for longer strings
     if (typeDelay < 0) {
@@ -171,6 +161,11 @@ async function type(s, typeDelay = _1t) {
     }*/
 
     s = s.replace("\\b", "\b");
+
+    // no internal newlines!
+    s = s.replace(/[\r\n]+/, " ");
+    s = s.trim();
+    if (eol) s = s + EOL;
 
     // bold
     s = s.replace(/\*([^\s\.,;:!\?-])/g, styles.bold + "$1");
@@ -194,17 +189,34 @@ async function type(s, typeDelay = _1t) {
         const interval = setInterval(() => {
             if (j > 0) {
                 j--;
+                return;
             }
-            else {
-                const si = s[i];
-                const sx = s.substring(i);
                 
+            let si = s[i];
+            const tail = s.substring(i);
+            
+            // some lookaheads:
                 // TODO: Implement output buffer with chars to type and delay cycles
+
                 // additional delay cycles for punctuation
-                const punctMatch = sx.match(/^[\.,!\?;:-\s]+/);
+            const punctMatch = tail.match(/^[\.,!\?;:-\s]+/);
                 if (punctMatch && punctMatch.length > 0) {
                     j = punctMatch[0].length + 1;
                 }
+            
+            const wordTailMatch = tail.match(/^[\S]+/);
+            if (wordTailMatch && wordTailMatch.length > 0) {
+                const wordTail = wordTailMatch[0];
+                const x = t.buffer.normal.cursorX + 1;
+                const { cols } = t.fitAddon.proposeDimensions();
+
+                // can we write entire word on same line?
+                if (x + wordTail.length > cols) {
+                    si = EOL;
+                    //j = _hs / typeDelay; // interline delay
+                    i--; // stay on same char
+                }
+            }
 
                 i++;
                 t.write(si, () => {
@@ -213,7 +225,6 @@ async function type(s, typeDelay = _1t) {
                         resolve("done");
                     }
                 });
-            }
         }, typeDelay);
     });
 }
@@ -899,6 +910,7 @@ export class App {
         window.game = new Game();
 
         const fitAddon = new FitAddon.FitAddon();
+        t.fitAddon = fitAddon;
         t.loadAddon(fitAddon);
         t.open(document.getElementById('terminal'));
         fitAddon.fit();
@@ -906,6 +918,12 @@ export class App {
         t.onData(e => {
             window.game.lastKey = e;
         });
+
+        /*
+        t.onLineFeed(e => {
+            console.log("line feed!");
+        });
+        */
 
         window.addEventListener("resize", evt => {
             fitAddon.fit();

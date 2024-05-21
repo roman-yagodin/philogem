@@ -1,3 +1,55 @@
+async function type2(s) {
+
+    const chunks = [];
+    const lines = s.split(/[\r\n]{2,}/);
+    console.log({lines: lines});
+    for (let line of lines) {
+        const words = line.split(/\s+/);
+        let lastChunk = null;
+        for (let word of words) {
+            if (word.length > 0) {
+                lastChunk = {text: word, eol: false};
+                chunks.push(lastChunk);
+            }
+        }
+        chunks.push({text: "", eol: true});
+    }
+
+    console.log({chunks: chunks});
+
+    const { cols } = t.fitAddon.proposeDimensions();
+
+    let x = 1;
+    for (let chunk of chunks) {
+        if (chunk.eol === true) {
+            //t.write(EOL + EOL);
+            await typeln();
+            x = 1;
+            continue;
+        }
+
+        if (x + chunk.text.length === cols) {
+            x = 1;
+        }
+        else if (x + chunk.text.length > cols) {
+            //t.write(EOL);
+            await typeln();
+            x = 1;
+        }
+        
+        if (x + chunk.text.length === cols) {
+            //t.write(chunk.text);
+            await type(chunk.text);
+            x += chunk.text.length;
+        }
+        else {
+            //t.write(chunk.text + " ");
+            await type(chunk.text + " ");
+            x += chunk.text.length + 1;
+        }
+    }
+}
+
 async function scene2_terminal() {
     await command("CLS");
 
