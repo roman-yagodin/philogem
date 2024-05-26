@@ -25,6 +25,10 @@ function parseNote(md) {
     }
 }
 
+function getEnNotesCount(notes) {
+    return notes.reduce((acc, note) => note.meta.lang === "en" ? acc + 1 : acc, 0);
+}
+
 const dataFolder = './data/';
 const fileNames = fs.readdirSync(dataFolder, { recursive: true });
 const notes = [];
@@ -36,7 +40,7 @@ fileNames.forEach(fileName => {
         const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
         const note = parseNote(content);
         note.id = shortFileName.replace(/\.md/g, '');
-        note.lang = note.lang || "en";
+        note.meta.lang = note.meta.lang || "en";
         if (!note.meta.colors || !note.meta.author) {
             console.error(`Error parsing frontmatter: ${note.id}.`);
         }
@@ -50,8 +54,7 @@ fileNames.forEach(fileName => {
     }
 });
 
-// TODO: Count notes in English separately
-console.log(`Processed ${notes.length} notes.`);
+console.log(`Processed ${notes.length} notes, ${getEnNotesCount(notes)} in English.`);
 
 const data = "export const notes = " + JSON.stringify(notes) + ";";
 fs.writeFileSync('./js/data.js', data);
