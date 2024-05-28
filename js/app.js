@@ -4,6 +4,7 @@ import { colorTheme, bowTheme } from "./themes.js";
 import { DEBUG } from "./debug.js";
 
 const EOL = "\n\r";
+const MAX_AP = 8;
 
 // type interval
 const _1t = 15;
@@ -56,17 +57,18 @@ class Game {
             if (typeof this.state.playerLevel === "undefined") {
                 this.state.playerLevel = 0;
             }
+            if (typeof this.state.AP === "undefined") {
+                this.state.AP = 0;
+            }
         }
         else {
             this.state = {
-                actionCounter: 0,
+                AP: 0,
                 playerName: randomMsg(playerNames),
                 returnAfter: null,
                 playerLevel: 0,
                 breadCrumbs: []
             };
-
-            this.resetActionCounter();
         }
 
         this.notes = notes;
@@ -75,62 +77,32 @@ class Game {
     }
 
     saveState() {
+        this.state.lastChange = new Date();
         localStorage.setItem("philogem_state", JSON.stringify(this.state));
     }
 
-    resetActionCounter() {
-        this.state.actionCounter = randomInt(10, 15);
-        return this.state.actionCounter;
+    addAP(n) {
+        this.state.AP += n;
+        this.saveState();
+        return this.state.AP;
     }
 
-    decrementActionCounter(n = 1) {
-        this.state.actionCounter -= n;
-        if (this.state.actionCounter < 0) {
-            this.state.actionCounter = 0;
-        }
-
-        if (this.state.actionCounter === 0) {
-            this.setReturnAfter();
-        }
-
-        return this.state.actionCounter;
+    addBreadcrumb(note) {
+        this.state.breadCrumbs.push(note.id);
+        this.saveState();
     }
-
-    incrementActionCounter(n) {
-        this.state.actionCounter += n;
-        this.resetReturnAfter();
-        return this.state.actionCounter;
-    }
-
-    setReturnAfter() {
+       
+    /** Degrades AP in rate of 1 for 2 hours of real time */
+    degradeAP() {
         const nowDate = new Date();
-        const returnAfterDate = new Date();
-        returnAfterDate.setHours(nowDate.getHours() + 12);
+        const idleHours = Math.floor(Math.abs(this.state.lastChange.getTime() - nowDate.getTime()) / 3600000);
 
-        this.state.returnAfter = returnAfterDate;
+        if (DEBUG) console.log({idleHours: idleHours});
 
-        console.log({ nowDate: nowDate, returnAfterDate: returnAfterDate });
-    }
-
-    resetReturnAfter() {
-        this.state.returnAfter = null;
-    }
-
-    checkReturnAfter() {
-        // don't check returnAfter date when debugging
-        if (DEBUG) {
-            return true;
+        if (idleHours > 2) {
+            this.state.AP -= Math.floor(idleHours / 2);
+            this.saveState();
         }
-
-        if (typeof this.state.returnAfter === "undefined" || !this.state.returnAfter) {
-            return true;
-        }
-
-        const nowDate = new Date();
-        if (this.state.returnAfter && nowDate >= this.state.returnAfter) {
-            return true;
-        }
-        return false;
     }
 
     getStartNote() {
@@ -154,17 +126,14 @@ async function typeln(s, typeDelay) {
 }
     
 async function type(s = "", typeDelay = _1t, eol = false) {
-    /*
-    // longer type delay for longer strings
-    if (typeDelay < 0) {
-        typeDelay = s.length * 0.025 + _1t;
-    }*/
+    // TODO: longer type delay for longer strings?
 
     s = s.replace("\\b", "\b");
 
     // no internal newlines!
     s = s.replace(/[\r\n]+/, " ");
-    s = s.trim();
+    // TODO: can cause problems with preformatted text, move to parameter?
+    s = s.trim(); 
     if (eol) s = s + EOL;
 
     // bold
@@ -196,9 +165,9 @@ async function type(s = "", typeDelay = _1t, eol = false) {
             const tail = s.substring(i);
             
             // some lookaheads:
-                // TODO: Implement output buffer with chars to type and delay cycles
+            // TODO: Implement output buffer with chars to type and delay cycles
 
-                // additional delay cycles for punctuation
+            // additional delay cycles for punctuation
             const punctMatch = tail.match(/^[\.,!\?;:-\s]+/);
                 if (punctMatch && punctMatch.length > 0) {
                     j = punctMatch[0].length + 1;
@@ -218,13 +187,13 @@ async function type(s = "", typeDelay = _1t, eol = false) {
                 }
             }
 
-                i++;
-                t.write(si, () => {
-                    if (i >= s.length) {
-                        clearInterval(interval);
-                        resolve("done");
-                    }
-                });
+            i++;
+            t.write(si, () => {
+                if (i >= s.length) {
+                    clearInterval(interval);
+                    resolve("done");
+                }
+            });
         }, typeDelay);
     });
 }
@@ -273,7 +242,7 @@ async function waitKey() {
             const key = game.lastKey;
             if (key) {
                 clearInterval(interval);
-                console.log({key: game.lastKey});
+                if (DEBUG) console.log({key: game.lastKey});
                 resolve(game.lastKey);
             }
         }, 100)
@@ -446,57 +415,14 @@ async function scene2_greeting() {
     // greeting
     const hello = game.isNewGame() ? "Hello" : "Welcome back"
     setStyle(styles.bold + styles.green);
-    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}${styles.green} of level ${styles.cyan}${game.state.playerLevel}!${styles.green}`);
-    await typeln(`> You have ${styles.cyan}${game.state.actionCounter}${styles.green} unspent AP.`)
-
-    if (!game.checkReturnAfter()) {
-        await tooExhausted();
-        await typeln();
-        await wait(_4s);
-        return false;
-    }
-    else {
-        if (game.state.actionCounter <= 0) {
-            game.state.playerLevel++;
-            game.resetActionCounter();
-            game.saveState();
-        }
-    }
-    
+    await typeln(`> ${hello}, ${styles.cyan}${game.state.playerName}${styles.green} of lvl ${styles.cyan}${game.state.playerLevel}!`);
+    setStyle(styles.bold + styles.green);
+    await typeln(`> You have ${styles.cyan}${game.state.AP}${styles.green} unspent AP.`)
     await typeln("> Take your time and have fun!");
     await typeln();
     resetStyle();
 
-    /*
-    let showMenu = true;
-    const adventure = randomMsg(["adventure", "your journey"]);
-    while (true) {
-        const choice = await menu([
-            { text: "", choice: "showMenu" },
-            { text: `Continue ${adventure}`, choice: "continue" },
-            { text: "You have emails: (1)", choice: "email" },
-            { text: `New ${adventure} (resets progress)`, choice: "newGame" }
-        ], showMenu);
-
-        showMenu = false;
-
-        if (choice === "showMenu") {
-            await typeln();
-            showMenu = true;
-        }
-        else if (choice === "continue") {
-            break;
-        }
-        else if (choice === "newGame" || choice === "email" ) {
-            setStyle(styles.bold + styles.green);
-            await typeln();
-            await typeln("> Not yet implemented.");
-            await typeln();
-            resetStyle();
-        }
-    }
-    */
-
+    // "creating" the world...
     setStyle(styles.bold + styles.red);
     await typeln();
 
@@ -516,8 +442,7 @@ async function scene2_greeting() {
     // to the world
     if (game.isNewGame()) {
         const note = game.getStartNote();
-        game.state.breadCrumbs.push(note.id);
-        game.saveState();
+        game.addBreadcrumb(note);
         return scene4_world(note);
     }
     else {
@@ -574,12 +499,6 @@ async function copyToClipboard(text) {
     }
 }
 
-async function tooExhausted() {
-    const hasty = ["hasty", "exhausted"];
-    const later = ["another day", "later", "tomorrow"];
-    await typeln(`> You are too ${randomMsg(hasty)}, come back ${randomMsg(later)}.`);
-}
-
 async function reachedEOW() {
     setStyle(styles.bold + styles.red);
     await typeln();
@@ -609,6 +528,7 @@ async function scene4_world(note) {
 
     let showNote = true;
     let showMenu = true;
+    let startFlag = true;
     let noteColor = randomNoteColor(note);
 
     while(true) {
@@ -633,55 +553,52 @@ async function scene4_world(note) {
             await readAutoKey();
         }
 
-        // TODO: Positive/negative switch: "Don't follow"
-        let choices = [
-            { text: "", choice: "showMenu" },
-            { text: "Follow author.", choice: "followAuthor" },
-            { text: "Follow color.", choice: "followColor" },
-            { text: "Follow language.", choice: "followLanguage" },
-            // TODO: Move utilities to submenu or review mode?
-            { text: "Copy the note.", choice: "copy" },
-            // TODO: Repeat slowly?
-            { text: "Repeat.", choice: "repeat" },
-        ];
-
-        if (note.id.includes("-")) {
-            const insertIdx = choices.findIndex(c => c.choice === "followLanguage") + 1;
-            choices = choices.toSpliced(insertIdx, 0, {
-                text: "In English, please!",
-                choice: "inEnglish"
-            });
+        if (startFlag) {
+            startFlag = false;
+            if (game.state.AP >= MAX_AP) {
+                game.degradeAP();
+            }
         }
 
-        if (note.meta.link) {
-            const insertIdx = choices.findIndex(c => c.choice === "copy");
-            choices = choices.toSpliced(insertIdx, 0, {
-                text: "Follow link.",
-                choice: "followLink"
-            });
+        let choices = [];
+        choices.push({ text: "", choice: "showMenu" });
+
+        if (game.state.AP < MAX_AP) {
+            // TODO: Positive/negative switch: "Don't follow"?
+            choices.push({ text: "Follow @uthor.", choice: "followAuthor" });
+            choices.push({ text: `Follow ${styles[noteColor]}color${styles.white}.`, choice: "followColor" });
+            choices.push({ text: "Follow λanguage.", choice: "followLanguage" });
+
+            if (note.id.includes("-")) {
+                choices.push({ text: "In English, please!", choice: "inEnglish" });
+            }
+
+            // TODO: Separate "Follow link" (block, in-game) and "Follow hyperlink" (block not)
+            if (note.meta.link) {
+                choices.push({ text: "Follow link.", choice: "followLink" });
+            }
         }
 
+        // TODO: Move utilities to submenu or review mode?
+        choices.push({ text: "Copy the note.", choice: "copy" });
+        // TODO: Repeat slowly?
+        choices.push({ text: "Repeat.", choice: "repeat" });
+
+        if (showMenu && game.state.AP >= MAX_AP) {
+            setStyle(styles.bold + styles.green);
+            await typeln(`> "Follow" actions disabled - you have ${styles.cyan}${game.state.AP}${styles.green} AP!`);
+            await typeln("> Spend some IRL and we'll see you later.");
+            resetStyle();
+            await typeln();
+        }
+        
         const choice = await menu(choices, showMenu);
         showMenu = false;
         
         if (choice.startsWith("follow")) {
-            game.decrementActionCounter(2);
+            game.addAP(1);
         }
-        else {
-            game.decrementActionCounter(1);
-        }
-        game.saveState();
-
-        if (game.state.actionCounter <= 0) {
-            await typeln();
-            setStyle(styles.bold + styles.green);
-            await tooExhausted();
-            resetStyle();
-            await typeln();
-            await wait(_4s);
-            break;
-        }
-
+        
         if (choice === "showMenu") {
             await typeln();
             showMenu = true;
@@ -703,8 +620,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.id);
-                game.saveState();
+                game.addBreadcrumb(note);
             }
             else {
                 await reachedEOW();
@@ -725,8 +641,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.id);
-                game.saveState();
+                game.addBreadcrumb(note);
             }
             else {
                 await reachedEOW();
@@ -746,8 +661,7 @@ async function scene4_world(note) {
 
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.id);
-                game.saveState();
+                game.addBreadcrumb(note);
             }
             else {
                 await reachedEOW();
@@ -762,8 +676,7 @@ async function scene4_world(note) {
             const nextNote = game.notes.find(n => n.id === baseId);
             if (nextNote) {
                 note = nextNote;
-                game.state.breadCrumbs.push(note.id);
-                game.saveState();
+                game.addBreadcrumb(note);
             }
             else {
                 await reachedEOW();
@@ -781,8 +694,7 @@ async function scene4_world(note) {
                 const nextNote = game.notes.find(n => n.id === note.meta.link);
                 if (nextNote) {
                     note = nextNote;
-                    game.state.breadCrumbs.push(note.id);
-                    game.saveState();
+                    game.addBreadcrumb(note);
                 }
                 else {
                     await reachedEOW();
@@ -840,7 +752,7 @@ async function waitAutoKey(silentTime, maxWaitTime, autoKey) {
             const key = game.lastKey;
             if (key) {
                 clearInterval(interval);
-                console.log({key: game.lastKey});
+                if (DEBUG) console.log({key: game.lastKey});
                 resolve(game.lastKey);
             }
         }, pollInterval);
@@ -881,7 +793,7 @@ export class App {
 
         /*
         t.onLineFeed(e => {
-            console.log("line feed!");
+            if (DEBUG) console.log("line feed!");
         });
         */
 
