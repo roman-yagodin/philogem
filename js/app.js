@@ -97,7 +97,7 @@ class Game {
         const nowDate = new Date();
         const idleHours = Math.floor(Math.abs(this.state.lastChange.getTime() - nowDate.getTime()) / 3600000);
 
-        console.log({idleHours: idleHours});
+        if (DEBUG) console.log({idleHours: idleHours});
 
         if (idleHours > 2) {
             this.state.AP -= Math.floor(idleHours / 2);
@@ -242,7 +242,7 @@ async function waitKey() {
             const key = game.lastKey;
             if (key) {
                 clearInterval(interval);
-                console.log({key: game.lastKey});
+                if (DEBUG) console.log({key: game.lastKey});
                 resolve(game.lastKey);
             }
         }, 100)
@@ -752,7 +752,7 @@ async function waitAutoKey(silentTime, maxWaitTime, autoKey) {
             const key = game.lastKey;
             if (key) {
                 clearInterval(interval);
-                console.log({key: game.lastKey});
+                if (DEBUG) console.log({key: game.lastKey});
                 resolve(game.lastKey);
             }
         }, pollInterval);
@@ -793,7 +793,7 @@ export class App {
 
         /*
         t.onLineFeed(e => {
-            console.log("line feed!");
+            if (DEBUG) console.log("line feed!");
         });
         */
 
