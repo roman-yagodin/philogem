@@ -5,7 +5,7 @@ export const colorTheme = {
     // black: '#1E1E1D',
     // brightBlack: '#262625',
     black: '#CE8500', // reuse black for orange (1)
-brightBlack: '#FFA500',
+    brightBlack: '#FFA500',
     red: '#CE5C5C',
     brightRed: '#FF7272',
     green: '#5BCC5B',

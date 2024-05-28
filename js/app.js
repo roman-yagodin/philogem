@@ -565,9 +565,9 @@ async function scene4_world(note) {
 
         if (game.state.AP < MAX_AP) {
             // TODO: Positive/negative switch: "Don't follow"?
-            choices.push({ text: "Follow author.", choice: "followAuthor" });
-            choices.push({ text: "Follow color.", choice: "followColor" });
-            choices.push({ text: "Follow language.", choice: "followLanguage" });
+            choices.push({ text: "Follow @uthor.", choice: "followAuthor" });
+            choices.push({ text: `Follow ${styles[noteColor]}color${styles.white}.`, choice: "followColor" });
+            choices.push({ text: "Follow λanguage.", choice: "followLanguage" });
 
             if (note.id.includes("-")) {
                 choices.push({ text: "In English, please!", choice: "inEnglish" });
