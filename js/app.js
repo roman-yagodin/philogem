@@ -60,6 +60,9 @@ class Game {
             if (typeof this.state.AP === "undefined") {
                 this.state.AP = 0;
             }
+            if (this.state.AP >= MAX_AP) {
+                this.degradeAP();
+            }
         }
         else {
             this.state = {
@@ -95,7 +98,11 @@ class Game {
     /** Degrades AP in rate of 1 for 2 hours of real time */
     degradeAP() {
         const nowDate = new Date();
-        const idleHours = Math.floor(Math.abs(this.state.lastChange.getTime() - nowDate.getTime()) / 3600000);
+
+        // JSON.parse() not restore dates?
+        const lastChange = typeof this.state.lastChange === "string" ? new Date(this.state.lastChange) : this.state.lastChange;
+
+        const idleHours = Math.floor(Math.abs(lastChange.getTime() - nowDate.getTime()) / 3600000);
 
         if (DEBUG) console.log({idleHours: idleHours});
 
@@ -524,11 +531,38 @@ async function typeNote(note, noteColor) {
     await typeln();
 }
 
+function getNextNoteByColor(noteColor) {
+    const nextNotes = game.notes.filter(n => (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)));
+    if (nextNotes.length === 0) {
+        return null;
+    }
+    else if (nextNotes.length === 1) {
+        return nextNotes[0];
+    }
+    else {
+        const nextNoteIdx = randomInt(0, nextNotes.length);
+        return nextNotes[nextNoteIdx];
+    }
+}
+
+function getNextNoteByAuthor(author) {
+    const nextNotes = game.notes.filter(n => (n.meta.author == author && !game.state.breadCrumbs.includes(n.id)));
+    if (nextNotes.length === 0) {
+        return null;
+    }
+    else if (nextNotes.length === 1) {
+        return nextNotes[0];
+    }
+    else {
+        const nextNoteIdx = randomInt(0, nextNotes.length);
+        return nextNotes[nextNoteIdx];
+    }
+}
+
 async function scene4_world(note) {
 
     let showNote = true;
     let showMenu = true;
-    let startFlag = true;
     let noteColor = randomNoteColor(note);
 
     while(true) {
@@ -552,14 +586,7 @@ async function scene4_world(note) {
 
             await readAutoKey();
         }
-
-        if (startFlag) {
-            startFlag = false;
-            if (game.state.AP >= MAX_AP) {
-                game.degradeAP();
-            }
-        }
-
+        
         let choices = [];
         choices.push({ text: "", choice: "showMenu" });
 
@@ -611,13 +638,7 @@ async function scene4_world(note) {
         }
 
         if (choice === "followAuthor") {
-            const nextNote = game.notes.find(n => {
-                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.id)) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = getNextNoteByAuthor(note.meta.author);
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
@@ -632,13 +653,7 @@ async function scene4_world(note) {
         }
 
         if (choice === "followColor") {
-            const nextNote = game.notes.find(n => {
-                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = getNextNoteByColor(noteColor);
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
@@ -677,13 +692,17 @@ async function scene4_world(note) {
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
+
+                showNote = true;
+                showMenu = true;
             }
             else {
-                await reachedEOW();
-                noteColor = randomNoteColor(note);
+                await typeln();
+                setStyle(styles.bold + styles.green);
+                await typeln("> No English version, sorry!");
+                await typeln();
+                resetStyle();
             }
-            showNote = true;
-            showMenu = true;
         }
 
         if (choice === "followLink") {
