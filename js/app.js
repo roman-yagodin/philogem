@@ -60,6 +60,9 @@ class Game {
             if (typeof this.state.AP === "undefined") {
                 this.state.AP = 0;
             }
+            if (this.state.AP >= MAX_AP) {
+                this.degradeAP();
+            }
         }
         else {
             this.state = {
@@ -95,7 +98,11 @@ class Game {
     /** Degrades AP in rate of 1 for 2 hours of real time */
     degradeAP() {
         const nowDate = new Date();
-        const idleHours = Math.floor(Math.abs(this.state.lastChange.getTime() - nowDate.getTime()) / 3600000);
+
+        // JSON.parse() not restore dates?
+        const lastChange = typeof this.state.lastChange === "string" ? new Date(this.state.lastChange) : this.state.lastChange;
+
+        const idleHours = Math.floor(Math.abs(lastChange.getTime() - nowDate.getTime()) / 3600000);
 
         if (DEBUG) console.log({idleHours: idleHours});
 
@@ -528,7 +535,6 @@ async function scene4_world(note) {
 
     let showNote = true;
     let showMenu = true;
-    let startFlag = true;
     let noteColor = randomNoteColor(note);
 
     while(true) {
@@ -552,14 +558,7 @@ async function scene4_world(note) {
 
             await readAutoKey();
         }
-
-        if (startFlag) {
-            startFlag = false;
-            if (game.state.AP >= MAX_AP) {
-                game.degradeAP();
-            }
-        }
-
+        
         let choices = [];
         choices.push({ text: "", choice: "showMenu" });
 
