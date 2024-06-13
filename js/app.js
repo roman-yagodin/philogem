@@ -531,6 +531,34 @@ async function typeNote(note, noteColor) {
     await typeln();
 }
 
+function getNextNoteByColor(noteColor) {
+    const nextNotes = game.notes.filter(n => (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)));
+    if (nextNotes.length === 0) {
+        return null;
+    }
+    else if (nextNotes.length === 1) {
+        return nextNotes[0];
+    }
+    else {
+        const nextNoteIdx = randomInt(0, nextNotes.length);
+        return nextNotes[nextNoteIdx];
+    }
+}
+
+function getNextNoteByAuthor(author) {
+    const nextNotes = game.notes.filter(n => (n.meta.author == author && !game.state.breadCrumbs.includes(n.id)));
+    if (nextNotes.length === 0) {
+        return null;
+    }
+    else if (nextNotes.length === 1) {
+        return nextNotes[0];
+    }
+    else {
+        const nextNoteIdx = randomInt(0, nextNotes.length);
+        return nextNotes[nextNoteIdx];
+    }
+}
+
 async function scene4_world(note) {
 
     let showNote = true;
@@ -610,13 +638,7 @@ async function scene4_world(note) {
         }
 
         if (choice === "followAuthor") {
-            const nextNote = game.notes.find(n => {
-                if (n.meta.author == note.meta.author && !game.state.breadCrumbs.includes(n.id)) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = getNextNoteByAuthor(note.meta.author);
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
@@ -631,13 +653,7 @@ async function scene4_world(note) {
         }
 
         if (choice === "followColor") {
-            const nextNote = game.notes.find(n => {
-                if (n.meta.colors.includes(noteColor) && !game.state.breadCrumbs.includes(n.id)) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = getNextNoteByColor(noteColor);
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
@@ -676,13 +692,17 @@ async function scene4_world(note) {
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
+
+                showNote = true;
+                showMenu = true;
             }
             else {
-                await reachedEOW();
-                noteColor = randomNoteColor(note);
+                await typeln();
+                setStyle(styles.bold + styles.green);
+                await typeln("> No English version, sorry!");
+                await typeln();
+                resetStyle();
             }
-            showNote = true;
-            showMenu = true;
         }
 
         if (choice === "followLink") {
