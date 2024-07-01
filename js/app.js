@@ -60,9 +60,8 @@ class Game {
             if (typeof this.state.AP === "undefined") {
                 this.state.AP = 0;
             }
-            if (this.state.AP >= MAX_AP) {
-                this.degradeAP();
-            }
+            
+            this.degradeAP();
         }
         else {
             this.state = {
@@ -75,17 +74,16 @@ class Game {
         }
 
         this.notes = notes;
-
         this.saveState();
     }
 
     saveState() {
-        this.state.lastChange = new Date();
         localStorage.setItem("philogem_state", JSON.stringify(this.state));
     }
 
     addAP(n) {
         this.state.AP += n;
+        this.state.lastChange = new Date();
         this.saveState();
         return this.state.AP;
     }
@@ -108,6 +106,7 @@ class Game {
 
         if (idleHours > 2) {
             this.state.AP -= Math.floor(idleHours / 2);
+            this.state.lastChange = new Date();
             this.saveState();
         }
     }
