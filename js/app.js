@@ -102,7 +102,7 @@ class Game {
         // JSON.parse() not restore dates?
         const lastChange = typeof this.state.lastChange === "string" ? new Date(this.state.lastChange) : this.state.lastChange;
 
-        const idleHours = Math.floor(Math.abs(lastChange.getTime() - nowDate.getTime()) / 3600000);
+        const idleHours = Math.floor(Math.abs(nowDate.getTime() - lastChange.getTime()) / 3600000);
 
         if (DEBUG) console.log({idleHours: idleHours});
 
