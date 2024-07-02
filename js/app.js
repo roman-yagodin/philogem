@@ -145,6 +145,7 @@ async function type(s = "", typeDelay = _1t, eol = false) {
     s = s.trim(); 
     if (eol) s = s + EOL;
 
+    /*
     // bold
     s = s.replace(/\*([^\s\.,;:!\?-])/g, styles.bold + "$1");
     s = s.replace(/\*([\s\.,;:!\?-])/g, styles.nonBold + "$1");
@@ -152,6 +153,7 @@ async function type(s = "", typeDelay = _1t, eol = false) {
     // italics
     s = s.replace(/\_([^\s\.,;:!\?-])/g, styles.italics + "$1");
     s = s.replace(/\_([\s\.,;:!\?-])/g, styles.nonItalics + "$1");
+    */
 
     if (typeDelay === 0) {
         return new Promise((resolve) => {
