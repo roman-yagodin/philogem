@@ -66,8 +66,8 @@ class Game {
         else {
             this.state = {
                 AP: 0,
+                lastChange: new Date(),
                 playerName: randomMsg(playerNames),
-                returnAfter: null,
                 playerLevel: 0,
                 breadCrumbs: []
             };
@@ -105,9 +105,12 @@ class Game {
         if (DEBUG) console.log({idleHours: idleHours});
 
         if (idleHours > 2) {
-            this.state.AP -= Math.floor(idleHours / 2);
-            this.state.lastChange = new Date();
-            this.saveState();
+            const ap = this.state.AP - Math.floor(idleHours / 2);
+            if (ap >= 0) {
+                this.state.AP = ap;
+                this.state.lastChange = new Date();
+                this.saveState();
+            }
         }
     }
 
@@ -142,6 +145,7 @@ async function type(s = "", typeDelay = _1t, eol = false) {
     s = s.trim(); 
     if (eol) s = s + EOL;
 
+    /*
     // bold
     s = s.replace(/\*([^\s\.,;:!\?-])/g, styles.bold + "$1");
     s = s.replace(/\*([\s\.,;:!\?-])/g, styles.nonBold + "$1");
@@ -149,6 +153,7 @@ async function type(s = "", typeDelay = _1t, eol = false) {
     // italics
     s = s.replace(/\_([^\s\.,;:!\?-])/g, styles.italics + "$1");
     s = s.replace(/\_([\s\.,;:!\?-])/g, styles.nonItalics + "$1");
+    */
 
     if (typeDelay === 0) {
         return new Promise((resolve) => {
