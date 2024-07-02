@@ -66,8 +66,8 @@ class Game {
         else {
             this.state = {
                 AP: 0,
+                lastChange: new Date(),
                 playerName: randomMsg(playerNames),
-                returnAfter: null,
                 playerLevel: 0,
                 breadCrumbs: []
             };
@@ -105,9 +105,12 @@ class Game {
         if (DEBUG) console.log({idleHours: idleHours});
 
         if (idleHours > 2) {
-            this.state.AP -= Math.floor(idleHours / 2);
-            this.state.lastChange = new Date();
-            this.saveState();
+            const ap = this.state.AP - Math.floor(idleHours / 2);
+            if (ap >= 0) {
+                this.state.AP = ap;
+                this.state.lastChange = new Date();
+                this.saveState();
+            }
         }
     }
 
