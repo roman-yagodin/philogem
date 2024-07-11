@@ -93,24 +93,36 @@ class Game {
         this.saveState();
     }
        
+    getLastChangeDate() {
+        if (typeof this.state.lastChange === "undefined") {
+            return new Date();
+        }
+        
+        // JSON.parse() do not restore dates?
+        if (typeof this.state.lastChange === "string") {
+            return new Date(this.state.lastChange);
+        }
+
+        return this.state.lastChange;
+    }
+
     /** Degrades AP in rate of 1 for 2 hours of real time */
     degradeAP() {
         const nowDate = new Date();
-
-        // JSON.parse() not restore dates?
-        const lastChange = typeof this.state.lastChange === "string" ? new Date(this.state.lastChange) : this.state.lastChange;
-
+        
+        const lastChange = this.getLastChangeDate();
         const idleHours = Math.floor(Math.abs(nowDate.getTime() - lastChange.getTime()) / 3600000);
 
         if (DEBUG) console.log({idleHours: idleHours});
 
         if (idleHours > 2) {
-            const ap = this.state.AP - Math.floor(idleHours / 2);
-            if (ap >= 0) {
-                this.state.AP = ap;
-                this.state.lastChange = new Date();
-                this.saveState();
+            let newAP = this.state.AP - Math.floor(idleHours / 2);
+            if (newAP < 0) {
+                newAP = 0;
             }
+            this.state.AP = newAP;
+            this.state.lastChange = new Date();
+            this.saveState();
         }
     }
 
@@ -563,6 +575,20 @@ function getNextNoteByAuthor(author) {
     }
 }
 
+function getNextNoteByLanguage(lang) {
+    const nextNotes = game.notes.filter(n => (n.meta.lang == lang && !game.state.breadCrumbs.includes(n.id)));
+    if (nextNotes.length === 0) {
+        return null;
+    }
+    else if (nextNotes.length === 1) {
+        return nextNotes[0];
+    }
+    else {
+        const nextNoteIdx = randomInt(0, nextNotes.length);
+        return nextNotes[nextNoteIdx];
+    }
+}
+
 async function scene4_world(note) {
 
     let showNote = true;
@@ -604,9 +630,12 @@ async function scene4_world(note) {
                 choices.push({ text: "In English, please!", choice: "inEnglish" });
             }
 
-            // TODO: Separate "Follow link" (block, in-game) and "Follow hyperlink" (block not)
             if (note.meta.link) {
                 choices.push({ text: "Follow link.", choice: "followLink" });
+            }
+
+            if (note.meta.href) {
+                choices.push({ text: "Follow hyperlink.", choice: "followHyperLink" });
             }
         }
 
@@ -626,7 +655,7 @@ async function scene4_world(note) {
         const choice = await menu(choices, showMenu);
         showMenu = false;
         
-        if (choice.startsWith("follow")) {
+        if (choice.startsWith("follow") && choice !== "followHyperLink") {
             game.addAP(1);
         }
         
@@ -671,20 +700,13 @@ async function scene4_world(note) {
         }
 
         if (choice === "followLanguage") {
-            const nextNote = game.notes.find(n => {
-                if (n.meta.lang === note.meta.lang && !game.state.breadCrumbs.includes(n.id)) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = getNextNoteByLanguage(note.meta.lang);
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
             }
             else {
                 await reachedEOW();
-                noteColor = randomNoteColor(note);
             }
             showNote = true;
             showMenu = true;
@@ -710,22 +732,24 @@ async function scene4_world(note) {
         }
 
         if (choice === "followLink") {
-            if (note.meta.link.startsWith("http")) {
-                window.open(note.meta.link, "_blank");
+            const nextNote = game.notes.find(n => n.id === note.meta.link);
+            if (nextNote) {
+                note = nextNote;
+                game.addBreadcrumb(note);
             }
             else {
-                const nextNote = game.notes.find(n => n.id === note.meta.link);
-                if (nextNote) {
-                    note = nextNote;
-                    game.addBreadcrumb(note);
-                }
-                else {
-                    await reachedEOW();
-                    noteColor = randomNoteColor(note);
-                }
-                showNote = true;
-                showMenu = true;
+                await reachedEOW();
             }
+            showNote = true;
+            showMenu = true;
+        }
+
+        if (choice === "followHyperLink") {
+            if (note.meta.href) {
+                window.open(note.meta.href, "_blank");
+            }
+            showNote = false;
+            showMenu = false;
         }
         
         if (choice === "copy") {
