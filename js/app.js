@@ -105,12 +105,13 @@ class Game {
         if (DEBUG) console.log({idleHours: idleHours});
 
         if (idleHours > 2) {
-            const ap = this.state.AP - Math.floor(idleHours / 2);
-            if (ap >= 0) {
-                this.state.AP = ap;
-                this.state.lastChange = new Date();
-                this.saveState();
+            let newAP = this.state.AP - Math.floor(idleHours / 2);
+            if (newAP < 0) {
+                newAP = 0;
             }
+            this.state.AP = newAP;
+            this.state.lastChange = new Date();
+            this.saveState();
         }
     }
 
