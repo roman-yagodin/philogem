@@ -619,9 +619,12 @@ async function scene4_world(note) {
                 choices.push({ text: "In English, please!", choice: "inEnglish" });
             }
 
-            // TODO: Separate "Follow link" (block, in-game) and "Follow hyperlink" (block not)
             if (note.meta.link) {
                 choices.push({ text: "Follow link.", choice: "followLink" });
+            }
+
+            if (note.meta.href) {
+                choices.push({ text: "Follow hyperlink.", choice: "followHyperLink" });
             }
         }
 
@@ -641,7 +644,7 @@ async function scene4_world(note) {
         const choice = await menu(choices, showMenu);
         showMenu = false;
         
-        if (choice.startsWith("follow")) {
+        if (choice.startsWith("follow") && choice !== "followHyperLink") {
             game.addAP(1);
         }
         
@@ -718,22 +721,24 @@ async function scene4_world(note) {
         }
 
         if (choice === "followLink") {
-            if (note.meta.link.startsWith("http")) {
-                window.open(note.meta.link, "_blank");
+            const nextNote = game.notes.find(n => n.id === note.meta.link);
+            if (nextNote) {
+                note = nextNote;
+                game.addBreadcrumb(note);
             }
             else {
-                const nextNote = game.notes.find(n => n.id === note.meta.link);
-                if (nextNote) {
-                    note = nextNote;
-                    game.addBreadcrumb(note);
-                }
-                else {
-                    await reachedEOW();
-                    noteColor = randomNoteColor(note);
-                }
-                showNote = true;
-                showMenu = true;
+                await reachedEOW();
             }
+            showNote = true;
+            showMenu = true;
+        }
+
+        if (choice === "followHyperLink") {
+            if (note.meta.href) {
+                window.open(note.meta.href, "_blank");
+            }
+            showNote = false;
+            showMenu = false;
         }
         
         if (choice === "copy") {
