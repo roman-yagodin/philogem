@@ -564,6 +564,20 @@ function getNextNoteByAuthor(author) {
     }
 }
 
+function getNextNoteByLanguage(lang) {
+    const nextNotes = game.notes.filter(n => (n.meta.lang == lang && !game.state.breadCrumbs.includes(n.id)));
+    if (nextNotes.length === 0) {
+        return null;
+    }
+    else if (nextNotes.length === 1) {
+        return nextNotes[0];
+    }
+    else {
+        const nextNoteIdx = randomInt(0, nextNotes.length);
+        return nextNotes[nextNoteIdx];
+    }
+}
+
 async function scene4_world(note) {
 
     let showNote = true;
@@ -672,20 +686,13 @@ async function scene4_world(note) {
         }
 
         if (choice === "followLanguage") {
-            const nextNote = game.notes.find(n => {
-                if (n.meta.lang === note.meta.lang && !game.state.breadCrumbs.includes(n.id)) {
-                    return true;
-                }
-                return false;
-            });
-
+            const nextNote = getNextNoteByLanguage(note.meta.lang);
             if (nextNote) {
                 note = nextNote;
                 game.addBreadcrumb(note);
             }
             else {
                 await reachedEOW();
-                noteColor = randomNoteColor(note);
             }
             showNote = true;
             showMenu = true;
