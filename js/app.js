@@ -93,13 +93,24 @@ class Game {
         this.saveState();
     }
        
+    getLastChangeDate() {
+        if (typeof this.state.lastChange === "undefined") {
+            return new Date();
+        }
+        
+        // JSON.parse() do not restore dates?
+        if (typeof this.state.lastChange === "string") {
+            return new Date(this.state.lastChange);
+        }
+
+        return this.state.lastChange;
+    }
+
     /** Degrades AP in rate of 1 for 2 hours of real time */
     degradeAP() {
         const nowDate = new Date();
-
-        // JSON.parse() not restore dates?
-        const lastChange = typeof this.state.lastChange === "string" ? new Date(this.state.lastChange) : this.state.lastChange;
-
+        
+        const lastChange = this.getLastChangeDate();
         const idleHours = Math.floor(Math.abs(nowDate.getTime() - lastChange.getTime()) / 3600000);
 
         if (DEBUG) console.log({idleHours: idleHours});
