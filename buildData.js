@@ -34,7 +34,7 @@ const fileNames = fs.readdirSync(dataFolder, { recursive: true });
 const notes = [];
 
 fileNames.forEach(fileName => {
-    if (fileName.endsWith(".md")) {
+    if (fileName.endsWith(".md") && !fileName.startsWith("_")) {
         const content = fs.readFileSync(`./data/${fileName}`, 'utf8');
         const dirSepIndex = fileName.lastIndexOf("\\");
         const shortFileName = dirSepIndex >= 0 ? fileName.substring(dirSepIndex + 1) : fileName;
